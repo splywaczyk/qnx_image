@@ -8,11 +8,14 @@ This project contains a Hello World application for QNX 8 built with Bazel.
 .
 ├── app/
 │   ├── BUILD          # Build configuration for the application
-│   └── hello.c        # Hello World source code
+│   └── hello.cpp      # Hello World C++ source code
 ├── bazel/
-│   ├── BUILD          # QNX toolchain configuration
-│   ├── qnx_toolchain.bzl  # Toolchain implementation
-│   └── qcc_wrapper.sh # QCC compiler wrapper script
+│   ├── toolchains/    # QNX toolchain definitions
+│   │   ├── BUILD      # Toolchain configurations
+│   │   ├── qnx_toolchain.bzl  # Toolchain rule implementation
+│   │   └── qcc_wrapper.sh     # QCC compiler wrapper script
+│   └── platforms/     # Platform definitions
+│       └── BUILD      # QNX platform definitions (x86_64, aarch64)
 ├── third_party/
 │   ├── qnx/           # QNX SDP integration
 │   └── variables.bzl  # QNX SDP path configuration
@@ -84,5 +87,31 @@ bazel build //app:hello
 ## Toolchain Components
 
 - **Compiler**: QNX qcc with GCC 12.2.0
-- **Wrapper Script**: `bazel/qcc_wrapper.sh` handles environment setup and flag filtering
+- **Wrapper Script**: `bazel/toolchains/qcc_wrapper.sh` handles environment setup and flag filtering
 - **Platforms**: Configured for QNX x86_64 and aarch64 targets
+
+## Security Policies
+
+The project includes QNX security policies (secpol) for IPC communication:
+
+- **Location**: `config/secpol/`
+- **Policy File**: `ipc_policy.sp` - Defines security types and permissions for sender/receiver communication
+- **Features**:
+  - Domain transitions for sender_t and receiver_t types
+  - Socket creation, binding, and connection permissions
+  - Channel communication abilities
+  - Unix domain socket access controls
+
+### Using Security Policies
+
+Compile the policy:
+```bash
+secpolcompile -o ipc_policy.bin config/secpol/ipc_policy.sp
+```
+
+Load at runtime:
+```bash
+secpol -l ipc_policy.bin
+```
+
+See `config/secpol/README.md` for detailed documentation.

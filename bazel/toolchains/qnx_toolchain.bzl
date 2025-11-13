@@ -7,7 +7,7 @@ load("@bazel_tools//tools/cpp:cc_toolchain_config_lib.bzl",
      "tool_path")
 load("@bazel_tools//tools/build_defs/cc:action_names.bzl", "ACTION_NAMES")
 
-def _qnx_cc_toolchain_config_impl(ctx):
+def _cc_toolchain_config_impl(ctx):
     """Implements cc_toolchain_config for QNX"""
 
     tool_paths = [
@@ -112,8 +112,8 @@ def _qnx_cc_toolchain_config_impl(ctx):
         cxx_builtin_include_directories = cxx_builtin_include_directories,
     )
 
-qnx_cc_toolchain_config = rule(
-    implementation = _qnx_cc_toolchain_config_impl,
+cc_toolchain_config = rule(
+    implementation = _cc_toolchain_config_impl,
     attrs = {
         "toolchain_identifier": attr.string(mandatory = True),
         "target_system_name": attr.string(mandatory = True),
