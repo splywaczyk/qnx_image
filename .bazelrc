@@ -1,0 +1,18 @@
+# QNX Build Configuration
+
+# Use the QNX x86_64 platform by default
+build --platforms=//bazel:qnx_x86_64
+
+# Enable toolchain resolution
+build --incompatible_enable_cc_toolchain_resolution
+
+# Disable sandboxing for QNX builds (due to license file access)
+build --spawn_strategy=local
+build --strategy=CppCompile=local
+build --strategy=CppLink=local
+
+# For aarch64, use: --platforms=//bazel:qnx_aarch64
+build:aarch64 --platforms=//bazel:qnx_aarch64
+
+# For x86_64 (explicit)
+build:x86_64 --platforms=//bazel:qnx_x86_64
