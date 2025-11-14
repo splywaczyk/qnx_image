@@ -1,10 +1,13 @@
 """QNX Toolchain Configuration for Bazel"""
 
 load("@bazel_tools//tools/cpp:cc_toolchain_config_lib.bzl",
-     "feature",
-     "flag_group",
-     "flag_set",
-     "tool_path")
+    "env_entry",
+    "env_set",
+    "feature",
+    "flag_group",
+    "flag_set",
+    "tool_path"
+)
 load("@bazel_tools//tools/build_defs/cc:action_names.bzl", "ACTION_NAMES")
 
 def _cc_toolchain_config_impl(ctx):
@@ -45,27 +48,109 @@ def _cc_toolchain_config_impl(ctx):
         ),
     ]
 
+    all_cpp_compile_actions = [
+        ACTION_NAMES.clif_match,
+        ACTION_NAMES.cpp_compile,
+        ACTION_NAMES.cpp_header_parsing,
+        ACTION_NAMES.cpp_module_compile,
+        ACTION_NAMES.cpp_module_codegen,
+        ACTION_NAMES.linkstamp_compile,
+    ]
+
+    all_compile_actions = all_cpp_compile_actions + [
+        ACTION_NAMES.assemble,
+        ACTION_NAMES.c_compile,
+        ACTION_NAMES.preprocess_assemble,
+    ]
+
+    all_link_actions = [
+        ACTION_NAMES.cpp_link_executable,
+        ACTION_NAMES.cpp_link_dynamic_library,
+        ACTION_NAMES.cpp_link_nodeps_dynamic_library,
+    ]
+
+    all_actions = all_compile_actions + all_link_actions
+
+    # setup environment variables for QNX
+    sdp_env_flags_feature = feature(
+        name = "sdp_env",
+        enabled = True,
+        env_sets = [
+            env_set(
+                actions = all_actions,
+                env_entries = [
+                    env_entry(
+                        key = "QNX_SDP_ENV_SH",
+                        value = "${{pwd}}/external/qnx_sdp/qnxsdp-env.sh",
+                    ),
+                    env_entry(
+                        key = "QNX_BIN_DIR",
+                        value = "$(location @qnx_sdp//:bin_dir)",
+                    ),
+                    env_entry(
+                        key = "QNX_SDP_WRAP",
+                        value = "$(location @qnx_sdp//:qcc_wrapper)",
+                    ),
+                ],
+            ),
+        ],
+    )
+
     # Unfiltered compiler flags (these come first, before Bazel's flags)
-    unfiltered_compile_flags = feature(
+    unfiltered_compile_flags_feature = feature(
         name = "unfiltered_compile_flags",
         enabled = True,
         flag_sets = [
             flag_set(
-                actions = [
-                    ACTION_NAMES.assemble,
-                    ACTION_NAMES.preprocess_assemble,
-                    ACTION_NAMES.linkstamp_compile,
-                    ACTION_NAMES.c_compile,
-                    ACTION_NAMES.cpp_compile,
-                    ACTION_NAMES.cpp_header_parsing,
-                    ACTION_NAMES.cpp_module_compile,
-                    ACTION_NAMES.cpp_module_codegen,
-                    ACTION_NAMES.lto_backend,
-                    ACTION_NAMES.clif_match,
-                ],
+                actions = all_compile_actions,
                 flag_groups = [
                     flag_group(
-                        flags = ctx.attr.compile_flags,
+                        flags = [
+                            "-V",
+                            "gcc_ntox86_64",
+                            "-std=gnu++14",
+                            "-fdiagnostics-color=always",
+                            "-frecord-gcc-switches",
+                        ],
+                    ),
+                ],
+            ),
+        ],
+    )
+
+    # Compiler flags
+    compiler_flags_feature = feature(
+        name = "compiler_flags",
+        enabled = True,
+        flag_sets = [
+            flag_set(
+                actions = all_compile_actions,
+                flag_groups = [
+                    flag_group(
+                        flags = [
+                            "-V",
+                            "gcc_ntox86_64",
+                            "-std=gnu++14",
+                            "-fdiagnostics-color=always",
+                            "-frecord-gcc-switches",
+                        ],
+                    ),
+                ],
+            ),
+        ],
+    )
+
+    # paths
+    include_paths_flags_feature = feature(
+        name = "include_paths_flags",
+        enabled = True,
+        flag_sets = [
+            flag_set(
+                actions = all_cpp_compile_actions,
+                flag_groups = [
+                    flag_group(
+                        flags = ["-I%{include_paths}"],
+                        iterate_over = "include_paths",
                     ),
                 ],
             ),
@@ -73,29 +158,32 @@ def _cc_toolchain_config_impl(ctx):
     )
 
     # Linker flags
-    linker_flags = feature(
+    linker_flags_feature = feature(
         name = "linker_flags",
         enabled = True,
         flag_sets = [
             flag_set(
-                actions = [
-                    ACTION_NAMES.cpp_link_executable,
-                    ACTION_NAMES.cpp_link_dynamic_library,
-                    ACTION_NAMES.cpp_link_nodeps_dynamic_library,
-                ],
+                actions = all_link_actions,
                 flag_groups = [
                     flag_group(
-                        flags = ctx.attr.link_flags,
+                        flags = [
+                            "-V",
+                            "gcc_ntox86_64",
+                            "-lc++",
+                        ],
                     ),
                 ],
             ),
         ],
     )
 
-    features = [unfiltered_compile_flags, linker_flags]
-
-    # Environment variables for QNX
-    cxx_builtin_include_directories = ctx.attr.cxx_builtin_include_directories
+    features = [
+        compiler_flags_feature,
+        include_paths_flags_feature,
+        linker_flags_feature,
+        sdp_env_flags_feature,
+        unfiltered_compile_flags_feature,
+    ]
 
     return cc_common.create_cc_toolchain_config_info(
         ctx = ctx,
@@ -107,9 +195,8 @@ def _cc_toolchain_config_impl(ctx):
         compiler = ctx.attr.compiler,
         abi_version = ctx.attr.abi_version,
         abi_libc_version = ctx.attr.abi_libc_version,
-        tool_paths = tool_paths,
         features = features,
-        cxx_builtin_include_directories = cxx_builtin_include_directories,
+        tool_paths = tool_paths,
     )
 
 cc_toolchain_config = rule(

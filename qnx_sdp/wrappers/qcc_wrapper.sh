@@ -4,9 +4,7 @@
 
 # Set QNX environment variables
 export HOME="${HOME:-/home/qnx}"
-export QNX_HOST="/home/qnx/qnx800/host/linux/x86_64"
-export QNX_TARGET="/home/qnx/qnx800/target/qnx"
-export QNX_CONFIGURATION="/home/qnx/.qnx"
+source /home/qnx/qnx800/qnxsdp-env.sh > /dev/null 2>&1
 
 # Parse arguments, filtering incompatible flags
 V_ARG=""

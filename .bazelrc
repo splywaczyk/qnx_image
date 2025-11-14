@@ -9,9 +9,3 @@ build --incompatible_enable_cc_toolchain_resolution
 # Allow QNX license directory access in sandbox
 build --sandbox_add_mount_pair=/home/qnx/.qnx
 build --sandbox_writable_path=/home/qnx/.qnx/license
-
-# For aarch64, use: --platforms=//bazel/platforms:qnx_aarch64
-build:aarch64 --platforms=//bazel/platforms:qnx_aarch64
-
-# For x86_64 (explicit)
-build:x86_64 --platforms=//bazel/platforms:qnx_x86_64

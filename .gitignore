@@ -1,5 +1,6 @@
 # Bazel build outputs
 /bazel-*
+MODULE.bazel.lock
 
 # IDE files
 .vscode/
@@ -20,3 +21,25 @@ Thumbs.db
 
 # QNX specific
 *.qnx
+
+# Module build artifacts
+# Generated IFS images
+module_*/images/
+module_*/keys/
+module_*/images/*.sig
+module_*/images/*.signed
+**/images/*.ifs
+**/images/*.img
+**/private_key.pem
+**/public_key.pem
+
+# QNX build temporary files
+*.build~
+*.tmpl~
+
+# Security policy compiled files
+**/*.spo
+
+# Log and audit files
+**/security_audit.log
+**/system.log
