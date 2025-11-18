@@ -23,35 +23,47 @@ filegroup(
 # x86_64 target runtime files
 filegroup(
     name = "x86_64_headers",
-    srcs = glob([
-        "target/qnx/x86_64/usr/include/**",
-    ]),
+    srcs = glob(
+        [
+            "target/qnx/x86_64/usr/include/**",
+        ],
+        allow_empty = True,
+    ),
 )
 
 filegroup(
     name = "x86_64_libs",
-    srcs = glob([
-        "target/qnx/x86_64/usr/lib/**",
-        "target/qnx/x86_64/lib/**",
-    ]),
+    srcs = glob(
+        [
+            "target/qnx/x86_64/usr/lib/**",
+            "target/qnx/x86_64/lib/**",
+        ],
+        allow_empty = True,
+    ),
 )
 
 # x86_64 GCC include directories
 filegroup(
     name = "x86_64_gcc_includes",
-    srcs = glob([
-        "host/linux/x86_64/usr/lib/gcc/x86_64-pc-nto-qnx8.0.0/*/include/**",
-        "host/linux/x86_64/usr/lib/gcc/x86_64-pc-nto-qnx8.0.0/*/include-fixed/**",
-    ]),
+    srcs = glob(
+        [
+            "host/linux/x86_64/usr/lib/gcc/x86_64-pc-nto-qnx8.0.0/*/include/**",
+            "host/linux/x86_64/usr/lib/gcc/x86_64-pc-nto-qnx8.0.0/*/include-fixed/**",
+        ],
+        allow_empty = True,
+    ),
 )
 
 # x86_64 GCC runtime libraries
 filegroup(
     name = "x86_64_gcc_libs",
-    srcs = glob([
-        "host/linux/x86_64/usr/lib/gcc/x86_64-pc-nto-qnx8.0.0/**/*.a",
-        "host/linux/x86_64/usr/lib/gcc/x86_64-pc-nto-qnx8.0.0/**/*.so",
-    ]),
+    srcs = glob(
+        [
+            "host/linux/x86_64/usr/lib/gcc/x86_64-pc-nto-qnx8.0.0/**/*.a",
+            "host/linux/x86_64/usr/lib/gcc/x86_64-pc-nto-qnx8.0.0/**/*.so",
+        ],
+        allow_empty = True,
+    ),
 )
 
 # Combined x86_64 toolchain files
@@ -90,9 +102,12 @@ filegroup(
 
 filegroup(
     name = "host_bin",
-    srcs = glob([
-        "host/linux/x86_64/usr/bin/**",
-    ]),
+    srcs = glob(
+        [
+            "host/linux/x86_64/usr/bin/**",
+        ],
+        allow_empty = True,
+    ),
 )
 
 filegroup(
