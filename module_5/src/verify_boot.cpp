@@ -42,7 +42,7 @@ private:
     }
 };
 
-int main(int argc, char* argv[]) {
+int main() {
     SecureBootVerifier verifier;
     verifier.displayStatus();
 

@@ -111,7 +111,7 @@ private:
     }
 };
 
-int main(int argc, char* argv[]) {
+int main() {
     SecureMessageReceiver receiver(RECEIVER_NAME);
 
     if (!receiver.initialize()) {

@@ -104,7 +104,7 @@ private:
     }
 };
 
-int main(int argc, char* argv[]) {
+int main() {
     MessageReceiver receiver(RECEIVER_NAME);
 
     if (!receiver.initialize()) {

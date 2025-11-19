@@ -104,7 +104,7 @@ private:
     }
 };
 
-int main(int argc, char* argv[]) {
+int main() {
     MessageSender sender("SENDER2", RECEIVER_NAME);
 
     if (!sender.connect()) {

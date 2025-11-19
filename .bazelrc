@@ -1,10 +1,9 @@
 # QNX Build Configuration
 
-# Use the QNX x86_64 platform by default
-build --platforms=//bazel/platforms:qnx_x86_64
+build:x86_64-qnx --incompatible_strict_action_env
+build:x86_64-qnx --platforms=@score_toolchains_qnx//platforms:x86_64-qnx
+build:x86_64-qnx --sandbox_writable_path=/var/tmp
 
-# Enable toolchain resolution (default in Bazel 8+)
-build --incompatible_enable_cc_toolchain_resolution
-
-# Bazel 8 compatibility
-common --enable_bzlmod
+build:aarch64-qnx --incompatible_strict_action_env
+build:aarch64-qnx --platforms=@score_toolchains_qnx//platforms:aarch64-qnx8_0
+build:aarch64-qnx --sandbox_writable_path=/var/tmp

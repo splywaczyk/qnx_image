@@ -37,7 +37,7 @@ private:
     }
 };
 
-int main(int argc, char* argv[]) {
+int main() {
     QNXApplication app("Hello from QNX Neutrino!");
     app.run();
     return EXIT_SUCCESS;
