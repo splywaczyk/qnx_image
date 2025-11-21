@@ -1,25 +1,25 @@
 [image=0x100000]
 
-[virtual=x86_64,bios +compress] boot = {
-    startup-x86
-    PATH=/proc/boot procnto-smp-instr -v
+[virtual=x86_64,multiboot] boot = {
+    # Use startup-x86 with 8250 serial for QEMU
+    startup-x86 -D 8250
+    PATH=/proc/boot
+    LD_LIBRARY_PATH=/proc/boot
+    procnto-smp-instr
 }
 
 [+script] startup-script = {
-    # Run our hello world application
-    /proc/boot/hello_world
+    display_msg ""
+    display_msg "============================================="
+    display_msg "      Hello QNX World from IFS image!"
+    display_msg "============================================="
+    display_msg ""
 }
 
-# Required QNX components
-[type=link] /tmp=/dev/shmem
-[type=link] /var/log=/tmp
-[type=link] /dev/console=/dev/ser1
+# Dynamic linker
+[type=link] /usr/lib/ldqnx-64.so.2=/proc/boot/ldqnx-64.so.2
+ldqnx-64.so.2 = ${QNX_TARGET}/x86_64/usr/lib/ldqnx-64.so.2
 
 # Essential libraries (startup-x86 and procnto-smp-instr auto-discovered from boot line)
 libc.so = ${QNX_TARGET}/x86_64/lib/libc.so
-libstdc++.so.6 = ${QNX_TARGET}/x86_64/lib/libstdc++.so.6
-libm.so.3 = ${QNX_TARGET}/x86_64/lib/libm.so.3
 libgcc_s.so.1 = ${QNX_TARGET}/x86_64/lib/libgcc_s.so.1
-
-# Our application
-hello_world = ${WORKSPACE_ROOT}/bazel-bin/module_1/src/hello_world

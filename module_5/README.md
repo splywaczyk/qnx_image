@@ -19,24 +19,19 @@ This module demonstrates QNX Secure Boot implementation with cryptographic image
 module_5/
 ├── src/
 │   ├── verify_boot.cpp          # Secure boot verifier application
-│   └── BUILD                     # Bazel build file
+│   └── BUILD                     # Bazel build file for C++ binary
 ├── buildfiles/
-│   └── secure_boot.build        # IFS build file
+│   ├── BUILD                     # Bazel filegroup for build file
+│   └── secure_boot.build        # IFS build configuration
 ├── tools/
 │   ├── generate_keys.sh         # RSA key pair generator
 │   ├── sign_image.sh            # Image signing script
 │   └── verify_image.sh          # Signature verification script
-├── keys/                         # RSA keys (generated)
+├── keys/                         # RSA keys (generated, not in git)
 │   ├── qnx_private.pem          # Private key for signing
 │   └── qnx_public.pem           # Public key for verification
-├── images/                       # Built images
-│   ├── qnx_unsigned.ifs         # Unsigned IFS image
-│   └── qnx_signed.ifs           # Signed IFS image
-├── build_image.sh               # Build unsigned image only
-├── build_and_sign.sh            # Complete build and sign process
-├── run_qemu.sh                  # QEMU launcher
-├── BUILD                        # Package marker
-└── README.md                    # This file
+├── BUILD                         # Bazel package with qnx_ifs rule
+└── README.md                     # This file
 ```
 
 ## Secure Boot Concepts
@@ -78,23 +73,28 @@ This generates:
 
 **IMPORTANT**: Keep the private key secure! It's used to sign trusted images.
 
-### 2. Build and Sign Image (Complete Process)
+### 2. Build IFS Image
+
+From the workspace root:
 
 ```bash
-./module_5/build_and_sign.sh
+# Build the secure boot IFS image
+bazel build //module_5:secure_boot_ifs
+
+# The IFS image will be created at:
+# bazel-bin/module_5/secure_boot.ifs
 ```
 
-This script:
-1. Builds the `verify_boot` application
-2. Creates unsigned IFS image
-3. Signs the image with private key
-4. Verifies the signature
-5. Produces `module_5/images/qnx_signed.ifs`
+This will:
+1. Build the `verify_boot` application using Bazel
+2. Create the IFS image with proper QNX components
+3. Include the verify_boot binary in the image
 
 ### 3. Run Secure Boot Demo
 
 ```bash
-./module_5/run_qemu.sh
+# Run the QEMU target
+bazel run //module_5:run_qemu
 ```
 
 Expected output:
@@ -131,34 +131,36 @@ System is running in SECURE BOOT mode
 
 ### Manual Build and Sign (Step-by-Step)
 
-For learning purposes, you can manually execute each step:
+For learning purposes with the tools directory scripts:
 
-#### Step 1: Build Unsigned Image
+#### Step 1: Build IFS Image
 
 ```bash
-./module_5/build_image.sh
+# Build the IFS image using Bazel
+bazel build //module_5:secure_boot_ifs
+
+# The unsigned IFS will be at:
+# bazel-bin/module_5/secure_boot.ifs
 ```
 
-Creates `module_5/images/qnx_unsigned.ifs`
-
-#### Step 2: Sign the Image
+#### Step 2: Sign the Image (Optional)
 
 ```bash
 ./module_5/tools/sign_image.sh \
-    module_5/images/qnx_unsigned.ifs \
-    module_5/images/qnx_signed.ifs
+    bazel-bin/module_5/secure_boot.ifs \
+    bazel-bin/module_5/secure_boot_signed.ifs
 ```
 
 This script:
 - Calculates SHA-256 hash of the image
 - Signs hash with private key using OpenSSL
 - Appends signature to image
-- Creates `qnx_signed.ifs.sig` signature file
+- Creates `.sig` signature file
 
-#### Step 3: Verify Signature
+#### Step 3: Verify Signature (Optional)
 
 ```bash
-./module_5/tools/verify_image.sh module_5/images/qnx_signed.ifs
+./module_5/tools/verify_image.sh bazel-bin/module_5/secure_boot_signed.ifs
 ```
 
 This script:
@@ -167,10 +169,14 @@ This script:
 - Verifies signature using public key
 - Reports success or failure
 
-#### Step 4: Boot Signed Image
+#### Step 4: Run the Image
 
 ```bash
-./module_5/run_qemu.sh module_5/images/qnx_signed.ifs
+# Run with Bazel
+bazel run //module_5:run_qemu
+
+# Or run QEMU directly with custom image
+qemu-system-x86_64 -kernel bazel-bin/module_5/secure_boot.ifs -nographic
 ```
 
 ### Testing Tamper Detection
@@ -178,14 +184,19 @@ This script:
 Demonstrate that modified images are detected:
 
 ```bash
-# Build and sign a valid image
-./module_5/build_and_sign.sh
+# Build image
+bazel build //module_5:secure_boot_ifs
+
+# Sign the image
+./module_5/tools/sign_image.sh \
+    bazel-bin/module_5/secure_boot.ifs \
+    bazel-bin/module_5/secure_boot_signed.ifs
 
 # Modify the signed image (tamper with it)
-echo "tampered" >> module_5/images/qnx_signed.ifs
+echo "tampered" >> bazel-bin/module_5/secure_boot_signed.ifs
 
 # Try to verify - should FAIL
-./module_5/tools/verify_image.sh module_5/images/qnx_signed.ifs
+./module_5/tools/verify_image.sh bazel-bin/module_5/secure_boot_signed.ifs
 ```
 
 Expected output:
@@ -226,29 +237,19 @@ Verifies a signed QNX IFS image:
 - Verifies signature using public key
 - Returns success (exit 0) or failure (exit 1)
 
-### build_image.sh
+### Bazel Build
 
-Builds unsigned image only:
-- Compiles `verify_boot` application
-- Creates IFS image without signature
-- Useful for manual signing workflow
-
-### build_and_sign.sh
-
-Complete automated workflow:
-- Generates keys if not present
-- Builds application
-- Creates unsigned image
-- Signs image
-- Verifies signature
-- Production-ready signed image
+The module uses Bazel for building:
+- `bazel build //module_5:secure_boot_ifs` - Builds IFS image
+- `bazel run //module_5:run_qemu` - Runs in QEMU
+- IFS image created at `bazel-bin/module_5/secure_boot.ifs`
 
 ### run_qemu.sh
 
-QEMU launcher with flexible image selection:
-- Default: `module_5/images/qnx_signed.ifs`
-- Optional parameter: custom image path
-- Example: `./module_5/run_qemu.sh module_5/images/qnx_unsigned.ifs`
+QEMU launcher script included in Bazel run target:
+- Launches QEMU with the IFS image
+- Configured for x86_64 with serial console
+- Press Ctrl+A then X to exit
 
 ## Source Code
 
@@ -345,20 +346,20 @@ Error: Private key not found: module_5/keys/qnx_private.pem
 Error: verify_boot not found
 ```
 
-**Solution**: Build the application:
+**Solution**: Build the IFS image:
 ```bash
-bazel build --config=qnx //module_5/src:verify_boot
+bazel build //module_5:secure_boot_ifs
 ```
 
 ### Image Not Found
 
 ```
-Error: Image not found: module_5/images/qnx_signed.ifs
+Error: Image not found
 ```
 
-**Solution**: Build complete image:
+**Solution**: Build the image first:
 ```bash
-./module_5/build_and_sign.sh
+bazel build //module_5:secure_boot_ifs
 ```
 
 ## Learning Exercises

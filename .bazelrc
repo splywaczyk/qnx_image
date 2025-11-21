@@ -1,3 +1,7 @@
+# External Registries
+common --registry=https://raw.githubusercontent.com/eclipse-score/bazel_registry/main/
+common --registry=https://bcr.bazel.build
+
 # QNX Build Configuration
 
 build:x86_64-qnx --incompatible_strict_action_env
@@ -7,3 +11,6 @@ build:x86_64-qnx --sandbox_writable_path=/var/tmp
 build:aarch64-qnx --incompatible_strict_action_env
 build:aarch64-qnx --platforms=@score_toolchains_qnx//platforms:aarch64-qnx8_0
 build:aarch64-qnx --sandbox_writable_path=/var/tmp
+
+# By default, build for x86_64 QNX
+build --config=x86_64-qnx

@@ -1,5 +1,10 @@
 # Module 4: QNX Security Policies and Access Control
 
+## Sources
+  - https://www.qnx.com/developers/docs/8.0/com.qnx.doc.neutrino.utilities/topic/p/procnto.html
+  - https://www.qnx.com/developers/docs/8.0/com.qnx.doc.security.system/topic/manual/using_security_policies.html
+  - https://www.qnx.com/developers/docs/8.0/com.qnx.doc.security.system/topic/manual/secpol_language.html
+
 ## Overview
 
 This module demonstrates QNX security policies and access control mechanisms using Inter-Process Communication (IPC) as a practical example. You'll learn how to:
@@ -55,19 +60,19 @@ By completing this module, you will understand:
 ```
 module_4/
 ├── README.md                  # This file
-├── BUILD                      # Bazel package marker
+├── QUICKSTART.md              # Quick start guide
+├── BUILD                      # Bazel package with qnx_ifs rule
 ├── src/                       # Source code
-│   ├── BUILD                  # Bazel build file
+│   ├── BUILD                  # Bazel build file for C++ binaries
 │   ├── receiver_secure.cpp    # Secure message receiver
 │   ├── sender1_secure.cpp     # Authorized sender
 │   └── sender2_secure.cpp     # Unauthorized sender
 ├── secpol/                    # Security policies
+│   ├── BUILD                  # Bazel filegroup for policy file
 │   └── ipc_policy.sp          # IPC access control policy
-├── buildfiles/                # IFS build files
-│   └── ipc_secure.build       # Secure IPC system image
-├── images/                    # Generated images (created by build)
-├── build_image.sh             # Build script
-└── run_qemu.sh                # QEMU launcher
+└── buildfiles/                # IFS build files
+    ├── BUILD                  # Bazel filegroup for build file
+    └── ipc_secure.build       # Secure IPC system image
 ```
 
 ## Security Policy Explained
@@ -163,42 +168,35 @@ if (errno == EACCES || errno == EPERM) {
 
 ### Prerequisites
 
-- QNX SDP 7.1 or 8.0 installed
-- Bazel build system configured
+- QNX SDP 8.0 installed
+- Bazel build system configured with S-CORE toolchains
 - QNX environment variables set
 - QEMU for x86_64
 
 ### Build Steps
 
-```bash
-cd module_4
+From the workspace root:
 
-# Build all applications and create secure image
-./build_image.sh
+```bash
+# Build all applications and create secure IFS image
+bazel build //module_4:ipc_secure_ifs
+
+# The IFS image will be created at:
+# bazel-bin/module_4/ipc_secure.ifs
 ```
 
 **Build Process**:
 1. Compiles three C++ applications using Bazel
-2. Validates security policy file
-3. Creates IFS image with procnto -S flag
-4. Includes security policy in boot image
-
-**Output**:
-```
-Module 4: Security Policies Build
-[1/3] Building secure IPC applications...
-[2/3] Checking security policy file...
-[3/3] Creating secure IPC image...
-Build Complete!
-Image: images/qnx_secure_ipc.ifs
-```
+2. Includes security policy file in the build
+3. Creates IFS image with procnto -S flag for security enforcement
+4. Packages all components with proper dependencies
 
 ## Running the Demo
 
 ### Launch QEMU
 
 ```bash
-./run_qemu.sh
+bazel run //module_4:run_qemu
 ```
 
 ### Expected Output
@@ -500,7 +498,7 @@ rule rate_limit_sender1 {
 ```bash
 # Clean build
 bazel clean
-./build_image.sh
+bazel build //module_4:ipc_secure_ifs
 ```
 
 ### Runtime Issues

@@ -10,11 +10,11 @@ bazel_dep(name = "platforms", version = "0.0.11")
 bazel_dep(name = "bazel_skylib", version = "1.7.1")
 
 # QNX SDP dependency
-bazel_dep(name = "score_toolchains_qnx", version = "0.0.3")
 
+bazel_dep(name = "score_toolchains_qnx", version = "0.0.3")
 local_path_override(
     module_name = "score_toolchains_qnx",
-    path = "./toolchains_qnx",
+    path = "./toolchains_qnx_local",
 )
 
 toolchains_qnx = use_extension("@score_toolchains_qnx//:extensions.bzl", "toolchains_qnx")

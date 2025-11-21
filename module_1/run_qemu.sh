@@ -3,10 +3,10 @@
 
 set -e
 
-IMAGE="./images/qnx_minimal.ifs"
+IFS_IMAGE=$1
 
-if [ ! -f "$IMAGE" ]; then
-    echo "Error: Image not found: $IMAGE"
+if [ ! -f "$IFS_IMAGE" ]; then
+    echo "Error: Image not found: $IFS_IMAGE"
     echo "Run ./build_image.sh first"
     exit 1
 fi
@@ -16,9 +16,11 @@ echo "Press Ctrl+C"
 echo ""
 
 qemu-system-x86_64 \
-    -kernel "$IMAGE" \
+    -kernel "$IFS_IMAGE" \
+    -cpu max \
     -m 512M \
     -smp 2 \
-    -serial stdio \
+    -serial mon:stdio \
     -display none \
-    -no-reboot
+    -no-reboot \
+    -nographic

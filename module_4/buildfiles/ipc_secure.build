@@ -1,121 +1,455 @@
-# module_4/buildfiles/ipc_secure.build
-# QNX image with security policies for IPC access control
+# ==============================================================================
+# Module 4: Security Policies and IPC Access Control
+# ==============================================================================
+# This IFS build file demonstrates QNX Adaptive Partitioning security policies
+# for controlling Inter-Process Communication (IPC) channel access.
+#
+# Security Model:
+#   - Mandatory Access Control (MAC)
+#   - Type-based security enforcement
+#   - Default deny-all policy
+#   - Explicit allow rules only
+#
+# Components:
+#   - Security policy: secpol.bin (compiled from ipc_policy.sp)
+#   - Receiver: Creates IPC channel with security type
+#   - Sender1: Authorized to connect (allowed by policy)
+#   - Sender2: Unauthorized to connect (denied by policy)
+#
+# Variables used:
+#   ${POLICY_PATH}    - Path to compiled security policy binary
+#   ${RECEIVER_PATH}  - Path to receiver application
+#   ${SENDER1_PATH}   - Path to sender1 application (authorized)
+#   ${SENDER2_PATH}   - Path to sender2 application (unauthorized)
+#   ${QNX_TARGET}     - QNX SDP target directory
+# ==============================================================================
 
+# ------------------------------------------------------------------------------
+# IMAGE SIZE ALLOCATION
+# ------------------------------------------------------------------------------
 [image=0x300000]
+# Size: 0x300000 = 3 MB (3,145,728 bytes)
+# Allocation: Reserves memory for entire IFS image
+# Contents:
+#   - Kernel (procnto-smp-instr): ~150 KB
+#   - startup-x86: ~50 KB
+#   - Libraries (libc, libc++, libsecpol, etc.): ~3.5 MB
+#   - Utilities (ksh, toybox, etc.): ~1 MB
+#   - Security policy: ~1 KB
+#   - Applications: ~15 KB each
+# Note: mkifs will fail if contents exceed this size
 
-# Boot section - start procnto with -S flag for security enforcement
-[virtual=x86_64,bios +compress] boot = {
-    startup-x86
+# ------------------------------------------------------------------------------
+# BOOT SECTION - Kernel and Early Init
+# ------------------------------------------------------------------------------
+# The boot section defines the microkernel and environment for early boot.
+# Format: [virtual=ARCH,BOOTLOADER] boot = { ... }
+
+[virtual=x86_64,multiboot] boot = {
+    # --- Startup Program ---
+    # startup-x86: Board-specific startup program for x86/x86_64
+    # -D 8250: Initialize 8250-compatible serial port (UART)
+    #          8250 = Standard PC serial controller
+    #          Enables serial console at 0x3F8 (COM1)
+    startup-x86 -D 8250
+
+    # --- Environment Variables ---
+    # These are available to all processes started from the IFS
+
+    # PATH: Executable search path
+    # Order: /proc/boot (IFS root), /bin, /usr/bin, /sbin, /usr/sbin
+    # Note: /proc/boot is where all IFS files are mounted
     PATH=/proc/boot:/bin:/usr/bin:/sbin:/usr/sbin
+
+    # LD_LIBRARY_PATH: Shared library search path
+    # Order: /proc/boot (IFS libs), /lib, /usr/lib, /lib/dll
+    # Purpose: Dynamic linker uses this to find .so files
     LD_LIBRARY_PATH=/proc/boot:/lib:/usr/lib:/lib/dll
-    procnto-smp-instr -S
+
+    # --- QNX Microkernel ---
+    # procnto-smp-instr: QNX Neutrino microkernel
+    #   procnto = Process manager + kernel
+    #   smp = Symmetric Multi-Processing support
+    #   instr = Instrumented (with kernel call tracing)
+    # Note: Security enforcement enabled via secpolpush (not -S flag)
+    procnto-smp-instr
 }
 
-# Startup script
-[+script] startup-script = {
-    # Start system services
-    slogger2 &
-    pci-server &
-    random -t &
+# ------------------------------------------------------------------------------
+# STARTUP SCRIPT - System Initialization
+# ------------------------------------------------------------------------------
+# Runs after kernel boot. Initializes system services and applications.
+# Format: [+script] name = { commands }
+# Note: [+script] means script runs with /bin/sh (which links to ksh)
 
-    # Create directories
+[+script] startup-script = {
+    # --- System Services ---
+    # Start essential daemons in background (&)
+
+    slogger2 &
+    # System logger daemon for collecting log messages
+    # Logs stored in: /var/log/slog2 (actually /tmp/slog2)
+    # View with: slog2info
+
+    pci-server &
+    # PCI bus manager - enumerates PCI devices
+    # Required for: Device drivers accessing PCI bus
+
+    random -t &
+    # Random number generator daemon
+    # -t: Use timer-based entropy source
+    # Provides: /dev/random and /dev/urandom
+    # Note: Not cryptographically secure without hardware RNG
+
+    # --- Filesystem Setup ---
+    # Create required directories for runtime operation
+
     mkdir -p /tmp /var/log /etc /secpol
+    # -p: Create parent directories as needed, no error if exists
+    # /tmp: Temporary files (mapped to /dev/shmem - volatile)
+    # /var/log: System logs (mapped to /tmp via symlink)
+    # /etc: Configuration files
+    # /secpol: Security policy directory (for future policy files)
+
     mount -T io-pkt /dev/shmem /tmp
+    # Mount shared memory as /tmp filesystem
+    # -T io-pkt: Type is io-pkt (packet I/O memory)
+    # /dev/shmem: Shared memory device (RAM-based)
+    # /tmp: Mount point
+    # Benefit: Fast temporary storage, automatically cleaned on reboot
 
     sleep 1
+    # Wait 1 second for services to initialize
+    # Ensures: slogger2, pci-server, random are ready
 
-    echo ""
-    echo "============================================="
-    echo "  QNX Security Policies & Access Control"
-    echo "  Module 4 Training"
-    echo "============================================="
-    echo "  Security Framework: ENABLED"
-    echo "  Policy Enforcement: ACTIVE"
-    echo "  procnto flag: -S (security)"
-    echo "============================================="
-    echo ""
+    # --- User Interface Messages ---
+    # display_msg is a toybox utility (equivalent to echo)
 
-    # Load security policy
-    echo "Loading IPC security policy..."
-    if [ -f /proc/boot/ipc_policy.sp ]; then
-        secpolload /proc/boot/ipc_policy.sp
-        echo "Security policy loaded successfully"
-    else
-        echo "Warning: Security policy file not found"
-    fi
-    echo ""
+    display_msg ""
+    display_msg "============================================="
+    display_msg "  QNX Security Policies & Access Control"
+    display_msg "  Module 4 Training"
+    display_msg "============================================="
+    display_msg "  Security Framework: ENABLED"
+    display_msg "  Policy Enforcement: ACTIVE"
+    display_msg "  procnto flag: -S (security)"
+    display_msg "============================================="
+    display_msg ""
 
-    # Start secure receiver
-    echo "Starting secure receiver (authorized domain)..."
-    /proc/boot/receiver_secure &
+    # --- Security Policy Enforcement ---
+    # CRITICAL: This enables the security policy system
+
+    display_msg "Enabling security policy enforcement..."
+    secpolpush
+    # secpolpush: Switches system to security policy enforcement mode
+    # Effect: All subsequent operations are subject to policy rules
+    # Policy location: /proc/boot/secpol.bin (default)
+    # Policy format: Compiled binary (from .sp source)
+    # Behavior change:
+    #   - Before: Traditional Unix permissions (DAC)
+    #   - After: Mandatory Access Control (MAC) enforced
+    # Important: Must be called before starting secured processes
+    display_msg "Security policy enforcement enabled"
+    display_msg ""
+
+    # --- Start Secure Applications with Security Types ---
+    # Format: on -T <type> <command> [args]
+    # Purpose: Assign security type to process
+    # Security type: Defines process permissions per policy
+
+    display_msg "Starting secure receiver (authorized domain)..."
+    on -T receiver_secure_t /proc/boot/receiver_secure &
+    # on: Process launcher utility
+    # -T receiver_secure_t: Assign security type "receiver_secure_t"
+    # Type definition: In ipc_policy.sp (type receiver_secure_t;)
+    # Process: Creates IPC channel with security enforcement
+    # Permissions: Can attach name to /dev/name/local/qnx_receiver_secure
+    # & Run in background
 
     sleep 2
+    # Wait for receiver to initialize and create IPC channel
+    # Ensures: Channel is ready before senders attempt connection
 
-    # Start sender1 (AUTHORIZED by policy)
-    echo "Starting sender1 (AUTHORIZED by policy)..."
-    /proc/boot/sender1_secure &
+    display_msg "Starting sender1 (AUTHORIZED by policy)..."
+    on -T sender1_secure_t /proc/boot/sender1_secure &
+    # Security type: sender1_secure_t
+    # Policy rule: Allow sender1_secure_t to connect to receiver_secure_t:channel
+    # Expected behavior: Successfully connects and sends messages
+    # Demonstrates: Authorized IPC access
 
-    # Start sender2 (UNAUTHORIZED - will be BLOCKED)
-    echo "Starting sender2 (UNAUTHORIZED - will be BLOCKED)..."
+    display_msg "Starting sender2 (UNAUTHORIZED - will be BLOCKED)..."
     sleep 1
-    /proc/boot/sender2_secure &
+    # Brief delay to let sender1 start first (clearer demo output)
+    on -T sender2_secure_t /proc/boot/sender2_secure &
+    # Security type: sender2_secure_t
+    # Policy rule: NO RULE (implicitly denied by default-deny policy)
+    # Expected behavior: Connection fails with EACCES or "No such process"
+    # Demonstrates: Policy-based access denial
 
-    echo ""
-    echo "============================================="
-    echo "Watch for security policy enforcement!"
-    echo "- Sender1: ALLOWED (green path)"
-    echo "- Sender2: DENIED by secpol (blocked)"
-    echo "============================================="
-    echo "Check audit log: cat /tmp/security_audit.log"
-    echo "============================================="
-    echo ""
+    # --- Status Information ---
+    display_msg ""
+    display_msg "============================================="
+    display_msg "Watch for security policy enforcement!"
+    display_msg "- Sender1: ALLOWED (green path)"
+    display_msg "- Sender2: DENIED by secpol (blocked)"
+    display_msg "============================================="
+    display_msg "Check audit log: cat /tmp/security_audit.log"
+    # Note: Audit log may not exist if policy doesn't enable audit
+    display_msg "============================================="
+    display_msg ""
 
-    # Start interactive shell
+    # --- Interactive Shell ---
     [+session] ksh &
+    # [+session]: Create new session with controlling TTY
+    # ksh: Korn Shell
+    # &: Run in background
+    # Purpose: Allows interactive exploration of system
+    # Features: Can run pidin, ps, check /dev/name/local, etc.
 }
 
-# Symbolic links
-[type=link] /bin/sh=/proc/boot/ksh
-[type=link] /tmp=/dev/shmem
-[type=link] /var/log=/tmp
-[type=link] /dev/console=/dev/ser1
+# ------------------------------------------------------------------------------
+# SECURITY POLICY BINARY
+# ------------------------------------------------------------------------------
+# Compiled security policy loaded by secpolpush
 
-# Essential libraries (startup-x86 and procnto-smp-instr auto-discovered from boot line)
-libc.so = ${QNX_TARGET}/x86_64/lib/libc.so
-libstdc++.so.6 = ${QNX_TARGET}/x86_64/lib/libstdc++.so.6
-libm.so.3 = ${QNX_TARGET}/x86_64/lib/libm.so.3
-libgcc_s.so.1 = ${QNX_TARGET}/x86_64/lib/libgcc_s.so.1
-libsocket.so = ${QNX_TARGET}/x86_64/lib/libsocket.so
+secpol.bin=${POLICY_PATH}
+# File: Compiled security policy binary
+# Source: ipc_policy.sp (QNX security policy language)
+# Compilation: secpolcompile -o secpol.bin ipc_policy.sp
+# Location in IFS: /proc/boot/secpol.bin (default location)
+# Size: ~600 bytes (binary format)
+# Format: Proprietary QNX binary format
+# Loading: Automatically loaded by secpolpush from /proc/boot/
+# Contents:
+#   - Type definitions (receiver_secure_t, sender1_secure_t, sender2_secure_t)
+#   - Allow rules (sender1 can connect to receiver's channel)
+#   - Default policy (deny all unless explicitly allowed)
 
-# System services
-slogger2 = ${QNX_TARGET}/x86_64/bin/slogger2
-pci-server = ${QNX_TARGET}/x86_64/sbin/pci-server
-random = ${QNX_TARGET}/x86_64/usr/sbin/random
+# ------------------------------------------------------------------------------
+# SECURE IPC APPLICATIONS
+# ------------------------------------------------------------------------------
+# These are the demonstration applications with security enforcement
 
-# Shell and utilities
-ksh = ${QNX_TARGET}/x86_64/bin/ksh
+receiver_secure=${RECEIVER_PATH}
+# Application: IPC message receiver with security
+# Binary: Built from module_common/apps/sender_receiver/receiver.cpp
+# Security type: receiver_secure_t (assigned by on -T)
+# Functionality:
+#   - Creates IPC channel via name_attach("qnx_receiver_secure")
+#   - Channel registered at: /dev/name/local/qnx_receiver_secure
+#   - Receives messages from authorized senders
+#   - Sends acknowledgment replies
+# Security enforcement:
+#   - Channel inherits receiver_secure_t type
+#   - Only processes with permission can connect
+#   - Policy allows: sender1_secure_t → receiver_secure_t:channel connect
+#   - Policy denies: sender2_secure_t (no rule = implicit deny)
 
-# Toybox - provides most Unix utilities
-toybox = ${QNX_TARGET}/x86_64/usr/bin/toybox
+sender1_secure=${SENDER1_PATH}
+# Application: Authorized IPC sender
+# Binary: Built from module_common/apps/sender_receiver/sender1.cpp
+# Security type: sender1_secure_t (assigned by on -T)
+# Functionality:
+#   - Connects to receiver via name_open("qnx_receiver_secure")
+#   - Sends 10 messages, 2-second intervals
+#   - Message format: type=1, subtype=100, data="Hello from SENDER1"
+# Security enforcement:
+#   - Policy explicitly allows connection
+#   - Rule: allow sender1_secure_t receiver_secure_t:channel connect
+#   - Expected: All messages successfully sent and acknowledged
+# Demonstrates: Authorized IPC access working correctly
 
-# Create symlinks for utilities via toybox
-[type=link] echo=toybox
-[type=link] sleep=toybox
-[type=link] mount=toybox
-[type=link] mkdir=toybox
-[type=link] cat=toybox
-[type=link] ls=toybox
-[type=link] grep=toybox
-[type=link] ps=toybox
+sender2_secure=${SENDER2_PATH}
+# Application: Unauthorized IPC sender (policy demonstration)
+# Binary: Built from module_common/apps/sender_receiver/sender2.cpp
+# Security type: sender2_secure_t (assigned by on -T)
+# Functionality:
+#   - Attempts to connect to receiver via name_open("qnx_receiver_secure")
+#   - Would send 7 messages, 3-second intervals (if allowed)
+#   - Message format: type=2, subtype=200, data="Greetings from SENDER2"
+# Security enforcement:
+#   - NO policy rule allowing connection
+#   - Default deny-all policy blocks connection
+#   - name_open() fails with ENOENT (No such process) or EACCES
+#   - Error message: "Cannot connect to receiver: No such process"
+# Demonstrates: Security policy actively denying unauthorized access
 
-# QNX-specific utilities
-pidin = ${QNX_TARGET}/x86_64/bin/pidin
-slay = ${QNX_TARGET}/x86_64/bin/slay
+# ------------------------------------------------------------------------------
+# SECURITY UTILITIES
+# ------------------------------------------------------------------------------
+# QNX utilities required for security policy enforcement
 
-# Security policy file
-ipc_policy.sp = ${MODULE_ROOT}/secpol/ipc_policy.sp
+secpolpush = ${QNX_TARGET}/x86_64/bin/secpolpush
+# Utility: Security policy enforcement activator
+# Purpose: Switch system from traditional permissions to policy enforcement
+# Usage: secpolpush (no arguments)
+# Effect:
+#   1. Loads /proc/boot/secpol.bin (default location)
+#   2. Parses compiled policy rules
+#   3. Enables Mandatory Access Control (MAC)
+#   4. All subsequent operations checked against policy
+# Return: 0 on success, non-zero on error
+# Errors:
+#   - Policy file not found
+#   - Policy compilation errors
+#   - Policy already active
+# Note: Can only be called once per boot
+# Requirement: Must run before starting type-assigned processes
 
-# Secure IPC applications
-receiver_secure = ${WORKSPACE_ROOT}/bazel-bin/module_4/src/receiver_secure
-sender1_secure = ${WORKSPACE_ROOT}/bazel-bin/module_4/src/sender1_secure
-sender2_secure = ${WORKSPACE_ROOT}/bazel-bin/module_4/src/sender2_secure
+on = ${QNX_TARGET}/x86_64/bin/on
+# Utility: Process launcher with attributes
+# Purpose: Start process with specific security type or capabilities
+# Usage: on [options] <command> [args]
+# Key options:
+#   -T <type>: Assign security type to process
+#   -U <uid>:<gid>: Run as specific user/group
+#   -n <node>: Run on specific network node
+# Example: on -T my_type_t /bin/app
+# Behavior:
+#   1. Forks new process
+#   2. Sets security type (procmgr_settypeid)
+#   3. Executes specified command
+# Security: Type is inherited by all child processes
+# Note: Security type cannot be changed after process starts
+
+# ------------------------------------------------------------------------------
+# COMMON TOOLS AND UTILITIES
+# ------------------------------------------------------------------------------
+# Include standard QNX utilities and libraries
+
+[+include] module_common/buildfiles/tools.build
+# Includes:
+#   - Dynamic linker (ldqnx-64.so.2)
+#   - Essential libraries (libc, libc++, libm, libgcc_s, libsocket)
+#   - System services (slogger2, pci-server, random, devc-pty, waitfor)
+#   - Toybox utilities (ls, cat, grep, ps, etc.)
+#   - QNX-specific tools (pidin, slay, ksh)
+#   - Additional utilities (awk, less, nice, renice, etc.)
+#   - Additional libraries (libsecpol.so.1, libslog2.so.1, etc.)
+# See: module_common/buildfiles/tools.build for complete list
+
+# ==============================================================================
+# SECURITY POLICY ARCHITECTURE
+# ==============================================================================
+#
+# Policy Enforcement Flow:
+#
+#   1. Boot: procnto-smp-instr starts (security disabled by default)
+#   2. Startup script runs
+#   3. secpolpush executes → Security enforcement ENABLED
+#   4. Receiver launched with type receiver_secure_t
+#      - Creates channel
+#      - Channel inherits receiver_secure_t type
+#   5. Sender1 launched with type sender1_secure_t
+#      - Attempts name_open()
+#      - Policy check: sender1_secure_t → receiver_secure_t:channel connect
+#      - Result: ALLOWED (explicit rule exists)
+#   6. Sender2 launched with type sender2_secure_t
+#      - Attempts name_open()
+#      - Policy check: sender2_secure_t → receiver_secure_t:channel connect
+#      - Result: DENIED (no rule, default deny)
+#
+# Type System:
+#
+#   Type Definition (in .sp file):
+#     type receiver_secure_t;   # Type for receiver process
+#     type sender1_secure_t;    # Type for authorized sender
+#     type sender2_secure_t;    # Type for unauthorized sender
+#
+#   Type Assignment (in this file):
+#     on -T receiver_secure_t /proc/boot/receiver_secure &
+#     on -T sender1_secure_t /proc/boot/sender1_secure &
+#     on -T sender2_secure_t /proc/boot/sender2_secure &
+#
+#   Type Inheritance:
+#     - Child processes inherit parent's type
+#     - Channels inherit creator's type
+#     - Types cannot be changed after creation
+#
+# Access Control Rules:
+#
+#   Allow Rule (in .sp file):
+#     allow sender1_secure_t receiver_secure_t:channel connect;
+#     # Meaning: Processes of type sender1_secure_t can connect to
+#     #          channels owned by processes of type receiver_secure_t
+#
+#   Name Attachment Rule (in .sp file):
+#     allow_attach receiver_secure_t /dev/name/local/qnx_receiver_secure;
+#     # Meaning: Processes of type receiver_secure_t can attach (register)
+#     #          the name /dev/name/local/qnx_receiver_secure
+#
+#   Default Deny:
+#     - Any operation not explicitly allowed is denied
+#     - sender2_secure_t has no connection rule → denied
+#
+# Policy Compilation:
+#
+#   Source: ipc_policy.sp (human-readable policy language)
+#   Compiler: secpolcompile -o secpol.bin ipc_policy.sp
+#   Output: secpol.bin (binary format for kernel)
+#   Validation: Compiler checks syntax, type references, rule validity
+#   Installation: Place at /proc/boot/secpol.bin in IFS
+#
+# Expected Output:
+#
+#   1. System boots and displays security status
+#   2. Policy enforcement enabled
+#   3. Receiver starts successfully
+#   4. Sender1 connects and sends 10 messages (all succeed)
+#   5. Sender2 fails to connect (5 retry attempts, then exits with error)
+#   6. Output clearly shows policy enforcement in action
+#
+# Debugging Security Policies:
+#
+#   Check policy is loaded:
+#     # Policy should exist at /proc/boot/secpol.bin
+#     ls -l /proc/boot/secpol.bin
+#
+#   View process types:
+#     pidin -f t
+#     # Shows security type ID for each process
+#
+#   Check name attachments:
+#     ls /dev/name/local/
+#     # Should show qnx_receiver_secure (if receiver running)
+#
+#   View connection attempts:
+#     # Watch receiver output for connection messages
+#     # Watch sender2 output for "Connection failed" messages
+#
+#   System logs:
+#     slog2info
+#     # May contain security policy messages
+#
+# ==============================================================================
+# TROUBLESHOOTING
+# ==============================================================================
+#
+# Issue: secpolpush fails with "license check failed"
+# Solution: Ensure QNX_CONFIGURATION is set and license file exists
+#           export QNX_CONFIGURATION=/home/qnx/.qnx
+#           ls ~/.qnx/license/
+#
+# Issue: sender2 connects when it should be denied
+# Cause: secpolpush not called or policy not loaded correctly
+# Solution: Verify secpolpush runs before starting applications
+#           Check secpol.bin exists at /proc/boot/
+#           Verify processes started with "on -T <type>"
+#
+# Issue: sender1 also denied (both senders fail)
+# Cause: Policy has syntax error or incorrect type names
+# Solution: Recompile policy with secpolcompile
+#           Check for compilation errors
+#           Verify type names match exactly in policy and on -T commands
+#
+# Issue: "Unable to start secpolpush (2)"
+# Cause: secpolpush binary not included in IFS
+# Solution: Verify secpolpush = ${QNX_TARGET}/x86_64/bin/secpolpush
+#           Rebuild IFS image
+#
+# Issue: "Unable to start on (2)"
+# Cause: on utility not included in IFS
+# Solution: Verify on = ${QNX_TARGET}/x86_64/bin/on
+#           Rebuild IFS image
+#
+# ==============================================================================

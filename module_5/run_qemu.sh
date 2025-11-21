@@ -4,10 +4,10 @@
 set -e
 
 # Default to signed image, allow parameter override
-IMAGE="${1:-module_5/images/qnx_signed.ifs}"
+IFS_IMAGE=$1
 
-if [ ! -f "$IMAGE" ]; then
-    echo "Error: Image not found: $IMAGE"
+if [ ! -f "$IFS_IMAGE" ]; then
+    echo "Error: Image not found: $IFS_IMAGE"
     echo ""
     echo "Build the image first:"
     echo "  ./module_5/build_and_sign.sh    # Build, sign, and verify"
@@ -22,17 +22,17 @@ fi
 echo "==========================================="
 echo "  QNX Secure Boot - QEMU Launcher"
 echo "==========================================="
-echo "Image: $IMAGE"
-echo "Size:  $(du -h "$IMAGE" | cut -f1)"
+echo "Image: $IFS_IMAGE"
+echo "Size:  $(du -h "$IFS_IMAGE" | cut -f1)"
 echo ""
 echo "Press Ctrl+C QEMU"
 echo "==========================================="
 echo ""
 
 qemu-system-x86_64 \
-    -kernel "$IMAGE" \
-    -m 512M \
-    -smp 2 \
+    -kernel "$IFS_IMAGE" \
+    -cpu max \
+    -m 2048 \
     -serial stdio \
     -display none \
     -no-reboot

@@ -337,7 +337,7 @@ config/
 ```bash
 # Build just the applications
 bazel build //module_1/src:hello_world --platforms=//bazel/platforms:qnx_x86_64
-bazel build //module_3/src:receiver //module_3/src:sender1 //module_3/src:sender2 --platforms=//bazel/platforms:qnx_x86_64
+bazel build //module_common/apps/sender_receiver:receiver //module_common/apps/sender_receiver:sender1 //module_common/apps/sender_receiver:sender2 --platforms=//bazel/platforms:qnx_x86_64
 ```
 
 ### Create IFS Image Only

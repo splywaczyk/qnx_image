@@ -12,19 +12,16 @@ This module demonstrates QNX message passing IPC with one receiver and two sende
 
 ```
 module_3/
-├── BUILD                    # Package marker
+├── BUILD                    # Bazel package with qnx_ifs rule
 ├── README.md               # This file
-├── build_image.sh          # Build script (executable)
-├── run_qemu.sh             # QEMU launcher (executable)
 ├── src/                    # Source code
-│   ├── BUILD               # Bazel build definitions
+│   ├── BUILD               # Bazel build definitions for C++ binaries
 │   ├── receiver.cpp        # MessageReceiver class
 │   ├── sender1.cpp         # MessageSender class (10 msgs, 2s interval)
 │   └── sender2.cpp         # MessageSender class (7 msgs, 3s interval)
-├── buildfiles/             # QNX build files
-│   └── ipc.build           # IFS build configuration
-└── images/                 # Generated IFS images (created during build)
-    └── ipc.ifs             # Generated QNX IFS image
+└── buildfiles/             # QNX IFS build files
+    ├── BUILD               # Bazel filegroup for build file
+    └── ipc.build           # IFS build configuration
 ```
 
 ## Building and Running
@@ -32,27 +29,31 @@ module_3/
 ### Prerequisites
 
 - QNX SDP 8.0 environment sourced
-- Bazel configured for QNX cross-compilation
+- Bazel configured for QNX cross-compilation with S-CORE toolchains
 - QEMU installed
 
 ### Build All Applications and Create IFS Image
 
+From the workspace root:
+
 ```bash
-cd module_3
-./build_image.sh
+# Build the IFS image
+bazel build //module_3:ipc_ifs
+
+# The IFS image will be created at:
+# bazel-bin/module_3/ipc.ifs
 ```
 
-This script will:
+This will:
 1. Build all three applications (receiver, sender1, sender2) using Bazel
-2. Verify the binaries were created successfully
-3. Create the IFS image using mkifs
-4. Display image information
+2. Create the IFS image using mkifs with the proper configuration
+3. Include all necessary QNX components and libraries
 
 ### Run in QEMU
 
 ```bash
-cd module_3
-./run_qemu.sh
+# Run the QEMU target
+bazel run //module_3:run_qemu
 ```
 
 This will:
@@ -112,13 +113,6 @@ Time 8s:    Sender1 sends message #4
 - Implements retry logic for connection attempts
 - Sends messages using `MsgSend()` (synchronous)
 - Waits for replies before continuing
-
-### Build Configuration
-
-All binaries are built with:
-- `-Wall -Wextra`: Enable all warnings
-- `-std=c++14`: C++14 standard
-- QNX cross-compilation toolchain (x86_64)
 
 ## Learning Objectives
 

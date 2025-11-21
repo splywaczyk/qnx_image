@@ -1,178 +1,335 @@
 # QNX Training: From Beginner to Advanced Security
-## Complete Hands-on Guide (C++ Edition)
+## Complete Hands-on Guide (C++ Edition with Bazel)
 
-This repository contains a complete QNX training organized into 5 progressive modules. Each module is self-contained with its own source code, build files, and images.
+This repository contains a complete QNX training organized into 5 progressive modules. Each module is self-contained with its own source code, Bazel BUILD files, and bootable IFS (Image Filesystem) images.
 
 ---
 
 ## Repository Structure
 
 ```
-qnx_workspace/
-├── module_1/          # Hello World - Your First QNX Application
-├── module_2/          # Extended System with Shell and Tools
-├── module_3/          # IPC Communication (Message Passing)
-├── module_4/          # Security Policies and Access Control
-├── module_5/          # Secure Boot Implementation
-├── bazel/             # Shared Bazel toolchain configuration
-├── config/            # Shared platform and configuration
-├── qnx_sdp/           # QNX SDP repository setup
-├── scripts/           # Common build scripts and utilities
-├── applications/      # Legacy applications (deprecated)
-├── build_all.sh       # Build all modules at once
-├── clean_all.sh       # Clean all build artifacts
-├── TRAINING.md        # Detailed training guide
-└── README.md          # This file
+qnx/
+├── module_1/                    # Hello World - Your First QNX Application
+│   ├── BUILD                    # Bazel build configuration
+│   ├── buildfiles/              # IFS build configuration
+│   └── run_qemu.sh              # QEMU launcher script
+├── module_2/                    # Extended System with Shell and Tools
+│   ├── BUILD                    # Bazel build configuration
+│   ├── buildfiles/              # IFS build configuration
+│   └── run_qemu.sh              # QEMU launcher script
+├── module_3/                    # IPC Communication (Message Passing)
+│   ├── BUILD                    # Bazel build configuration
+│   ├── buildfiles/              # IFS build configuration
+│   ├── README.md                # Module-specific documentation
+│   └── run_qemu.sh              # QEMU launcher script
+├── module_4/                    # Security Policies and Access Control
+│   ├── BUILD                    # Bazel build configuration
+│   ├── buildfiles/              # IFS build configuration
+│   ├── secpol/                  # Security policy definitions
+│   ├── README.md                # Module-specific documentation
+│   ├── QUICKSTART.md            # Quick start guide
+│   └── run_qemu.sh              # QEMU launcher script
+├── module_5/                    # Secure Boot Implementation
+│   ├── BUILD                    # Bazel build configuration
+│   ├── buildfiles/              # IFS build configuration
+│   ├── tools/                   # Key generation and signing tools
+│   ├── README.md                # Module-specific documentation
+│   └── run_qemu.sh              # QEMU launcher script
+├── module_common/               # Shared applications and build files
+│   ├── apps/                    # Reusable C++ applications
+│   │   ├── hello_world/         # Simple hello world app
+│   │   ├── sender_receiver/     # IPC demo apps (receiver, sender1, sender2)
+│   │   └── verify_boot/         # Boot verification app
+│   └── buildfiles/              # Common IFS build components
+├── toolchains_qnx/              # Bazel toolchain configuration
+│   ├── toolchains/              # QCC cross-compilation toolchain
+│   ├── rules/fs/                # IFS build rules
+│   ├── platforms/               # Platform definitions (x86_64)
+│   └── README.md                # Toolchain documentation
+├── .bazelrc                     # Bazel configuration
+├── MODULE.bazel                 # Bazel module definition
+├── TRAINING.md                  # Detailed training guide
+└── README.md                    # This file
 ```
 
 ---
 
 ## Quick Start
 
-### Build All Modules
-```bash
-./build_all.sh
-```
-
-### Run Individual Modules
-```bash
-# Module 1: Hello World
-./module_1/run_qemu.sh
-
-# Module 2: Extended System
-./module_2/run_qemu.sh
-
-# Module 3: IPC Communication
-./module_3/run_qemu.sh
-
-# Module 4: Security Policies
-./module_4/run_qemu.sh
-
-# Module 5: Secure Boot
-./module_5/run_qemu.sh
-```
-
-See [TRAINING.md](TRAINING.md) for complete documentation.
-
----
-
-## Prerequisites
+### Prerequisites
 
 - **QNX SDP 8.0** installed at `/home/qnx/qnx800`
-- **Bazel** build system installed
-- **QEMU** for x86_64 emulation
+- **Bazel 8.0+** build system installed
+- **QEMU** for x86_64 emulation (`qemu-system-x86_64`)
 - **Linux development machine** (tested on Ubuntu/WSL2)
+
+### Build and Run Modules with Bazel
+
+All modules use Bazel for building. The general pattern is:
+
+```bash
+# Build the IFS image
+bazel build //module_N:MODULE_NAME_ifs
+
+# Run in QEMU
+bazel run //module_N:run_qemu
+```
+
+### Specific Module Commands
+
+```bash
+# Module 1: Hello World
+bazel run //module_1:run_qemu
+
+# Module 2: Extended System
+bazel run //module_2:run_qemu
+
+# Module 3: IPC Communication
+bazel run //module_3:run_qemu
+
+# Module 4: Security Policies
+bazel run //module_4:run_qemu
+
+# Module 5: Secure Boot
+bazel run //module_5:run_qemu
+```
+
+See [TRAINING.md](TRAINING.md) for complete step-by-step documentation.
 
 ---
 
 ## Module Overview
 
-### Module 1: Hello World
+### Module 1: Hello World 👋
+**Duration:** 15-30 minutes
 **Learning Objectives:**
-- Build a simple C++ application for QNX
-- Create a minimal bootable QNX image
+- Build a simple C++ application for QNX using Bazel
+- Create a minimal bootable QNX IFS image (< 2MB)
 - Run QNX in QEMU emulator
+- Understand basic QNX image structure
 
-**Files:**
-- `module_1/src/hello_world.cpp` - Simple C++ application
-- `module_1/buildfiles/qnx_minimal.build` - Minimal IFS configuration
-- `module_1/build_image.sh` - Build script
-- `module_1/run_qemu.sh` - QEMU launcher
+**Key Components:**
+- `module_common/apps/hello_world/hello_world.cpp` - Simple C++ application with command-line args
+- `module_1/buildfiles/qnx_minimal.build` - Minimal IFS configuration with procnto and ksh
+- `module_1/BUILD` - Bazel build rules for IFS generation
+
+**What You'll See:**
+- QNX kernel boot sequence
+- Hello World output with process information
+- Automatic system exit after completion
 
 **Build & Run:**
 ```bash
-cd module_1
-./build_image.sh
-./run_qemu.sh
+bazel run //module_1:run_qemu
 ```
 
 ---
 
-### Module 2: Extended System
+### Module 2: Extended System 🛠️
+**Duration:** 30-45 minutes
 **Learning Objectives:**
-- Extend QNX image with utilities
-- Use ksh shell and toybox utilities
-- Explore system with common Unix tools
+- Extend QNX image with comprehensive utilities
+- Use ksh shell interactively
+- Work with toybox Unix utilities
+- Understand QNX system services
 
 **Features:**
-- Shell: ksh (Korn shell) with scripting support
-- Toybox utilities: echo, sleep, mkdir, mount
-- QNX-specific tools: pidin, slay, slogger2
-- System services: random daemon
+- **Shell:** ksh (Korn shell) with full scripting support and job control
+- **Toybox utilities:** ls, cat, cp, mv, rm, mkdir, chmod, touch, grep, sed, awk, ps
+- **QNX-specific tools:** pidin, slay, slogger2, nice, renice
+- **System services:** slogger2 (system logger), pci-server, random daemon
+- **Libraries:** Full libc, libc++, libm, libsocket support
+
+**What You'll See:**
+- Interactive shell prompt
+- Full Unix-like environment
+- System process listing with pidin
+- File system operations
 
 **Build & Run:**
 ```bash
-cd module_2
-./build_image.sh
-./run_qemu.sh
+bazel run //module_2:run_qemu
 ```
 
 ---
 
-### Module 3: IPC Communication
+### Module 3: IPC Communication 📡
+**Duration:** 45-60 minutes
 **Learning Objectives:**
-- Implement QNX message passing
-- Create receiver and sender applications
-- Understand synchronous IPC
+- Implement QNX native message passing IPC
+- Create message channels with `name_attach()`
+- Connect to channels with `name_open()`
+- Send/receive synchronous messages
+- Handle multiple concurrent clients
 
 **Components:**
-- `module_3/src/receiver.cpp` - Message receiver (creates channel)
-- `module_3/src/sender1.cpp` - Sends 10 messages, 2-second intervals
-- `module_3/src/sender2.cpp` - Sends 7 messages, 3-second intervals
+- `module_common/apps/sender_receiver/receiver.cpp` - Message receiver
+  - Creates named channel `/dev/name/local/qnx_receiver`
+  - Receives messages from multiple senders
+  - Displays message type, subtype, and data
+  - Sends acknowledgment replies
+- `module_common/apps/sender_receiver/sender1.cpp` - First sender
+  - Sends 10 messages (type=1, subtype=100)
+  - 2-second intervals between messages
+  - Waits for receiver acknowledgments
+- `module_common/apps/sender_receiver/sender2.cpp` - Second sender
+  - Sends 7 messages (type=2, subtype=200)
+  - 3-second intervals between messages
+  - Demonstrates concurrent IPC
+
+**What You'll See:**
+- Receiver starting and waiting for messages
+- Sender1 sending messages every 2 seconds
+- Sender2 sending messages every 3 seconds
+- Interleaved message reception and acknowledgment
+- Clean process termination
 
 **Build & Run:**
 ```bash
-cd module_3
-./build_image.sh
-./run_qemu.sh
+bazel run //module_3:run_qemu
+```
+
+**Key Concepts:**
+- Channel creation and naming
+- Connection IDs (coid) and Receive IDs (rcvid)
+- Synchronous message passing (blocking)
+- Message structure design
+
+---
+
+### Module 4: Security Policies 🔒
+**Duration:** 60-90 minutes
+**Learning Objectives:**
+- Configure QNX Adaptive Partitioning security policies
+- Implement mandatory access control (MAC)
+- Define security types for processes
+- Control IPC channel access
+- Demonstrate authorized vs unauthorized access
+- Enable security policy enforcement with `secpolpush`
+
+**Components:**
+- `module_common/apps/sender_receiver/receiver.cpp` - Secure receiver (type: receiver_secure_t)
+  - Creates secured channel with type enforcement
+  - Only accepts connections from authorized senders
+  - Logs security policy decisions
+- `module_common/apps/sender_receiver/sender1.cpp` - Authorized sender (type: sender1_secure_t)
+  - **ALLOWED** to connect per security policy
+  - Successfully sends all messages
+  - Demonstrates authorized IPC
+- `module_common/apps/sender_receiver/sender2.cpp` - Unauthorized sender (type: sender2_secure_t)
+  - **DENIED** by security policy
+  - Connection attempts fail
+  - Demonstrates policy enforcement
+- `module_4/secpol/ipc_policy.sp` - Security policy definition (QNX policy language)
+  - Defines three security types
+  - Allows sender1_secure_t → receiver_secure_t channel connections
+  - Implicitly denies sender2_secure_t (default deny-all)
+
+**What You'll See:**
+- Security policy enforcement enabled via `secpolpush`
+- Receiver starting with security type
+- Sender1 successfully connecting and sending messages
+- Sender2 connection failures with "No such process" error
+- Policy-based access control in action
+
+**Build & Run:**
+```bash
+bazel run //module_4:run_qemu
+```
+
+**Key Concepts:**
+- Security policy language (`.sp` files)
+- `secpolcompile` - Policy compilation
+- `secpolpush` - Enable policy enforcement
+- `on -T <type>` - Launch processes with security types
+- `allow_attach` - Control channel name attachment
+- `allow <type1> <type2>:channel connect` - Control channel connections
+- Default deny-all policy model
+
+**Security Policy Syntax:**
+```
+type receiver_secure_t;
+type sender1_secure_t;
+type sender2_secure_t;
+
+allow_attach receiver_secure_t /dev/name/local/qnx_receiver_secure;
+allow sender1_secure_t receiver_secure_t:channel connect;
+# sender2 implicitly denied
 ```
 
 ---
 
-### Module 4: Security Policies
+### Module 5: Secure Boot 🔐
+**Duration:** 60 minutes
 **Learning Objectives:**
-- Configure QNX security policies
-- Implement mandatory access control
-- Demonstrate authorized/unauthorized access
-- Audit security violations
+- Generate RSA-4096 key pairs for image signing
+- Sign QNX IFS images with cryptographic signatures
+- Verify image integrity before boot
+- Detect and reject tampered images
+- Implement chain of trust concepts
 
 **Components:**
-- `module_4/src/receiver_secure.cpp` - Secure receiver
-- `module_4/src/sender1_secure.cpp` - Authorized sender (ALLOWED)
-- `module_4/src/sender2_secure.cpp` - Unauthorized sender (DENIED)
-- `module_4/secpol/ipc_policy.sp` - Security policy definition
+- `module_common/apps/verify_boot/verify_boot.cpp` - Boot verification display
+  - Shows boot verification status
+  - Displays image hash
+  - Reports signature validation results
+- `module_5/tools/generate_keys.sh` - RSA key pair generation
+  - Creates 4096-bit RSA keys
+  - Generates PEM format private/public keys
+  - Stores keys in `module_5/keys/` directory
+- `module_5/tools/sign_image.sh` - Image signing utility
+  - Signs IFS image with SHA-256 + RSA
+  - Creates detached signature file (`.sig`)
+  - Uses OpenSSL for cryptographic operations
+- `module_5/tools/verify_image.sh` - Signature verification
+  - Verifies image signature before boot
+  - Validates cryptographic hash
+  - Reports verification success/failure
+
+**What You'll See:**
+- RSA key generation output
+- Image signing process
+- Signature verification results
+- Boot status display
+- Tamper detection demonstration (if image modified)
 
 **Build & Run:**
 ```bash
-cd module_4
-./build_image.sh
-./run_qemu.sh
+# First time: Generate RSA keys
+cd module_5/tools
+./generate_keys.sh
+
+# Build, sign, and run
+bazel run //module_5:run_qemu
 ```
 
----
+**Key Concepts:**
+- Public-key cryptography (RSA-4096)
+- Digital signatures (SHA-256 + RSA)
+- Image integrity verification
+- Chain of trust
+- Secure boot process flow
 
-### Module 5: Secure Boot
-**Learning Objectives:**
-- Generate RSA-4096 key pairs
-- Sign QNX images with cryptographic signatures
-- Verify image integrity
-- Detect tampering
-
-**Components:**
-- `module_5/src/verify_boot.cpp` - Boot verification status display
-- `module_5/tools/generate_keys.sh` - Generate RSA key pair
-- `module_5/tools/sign_image.sh` - Sign images with OpenSSL
-- `module_5/tools/verify_image.sh` - Verify signatures
-
-**Build & Run:**
-```bash
-cd module_5
-# Generate keys (first time only)
-./tools/generate_keys.sh
-# Build, sign, and verify
-./build_and_sign.sh
-# Run signed image
-./run_qemu.sh
+**Security Model:**
+```
+┌─────────────────┐
+│  Generate Keys  │ (One-time setup)
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐
+│   Build Image   │ (mkifs)
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐
+│   Sign Image    │ (RSA-4096 + SHA-256)
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐
+│  Verify & Boot  │ (Check signature)
+└─────────────────┘
 ```
 
 ---
@@ -180,84 +337,282 @@ cd module_5
 ## Architecture
 
 ### Bazel Build System
-All modules use a shared Bazel toolchain configuration located in `bazel/`:
-- `bazel/platforms/` - QNX x86_64 platform definition
-- `bazel/toolchains/` - Toolchain configuration for cross-compilation
+
+All modules use a centralized Bazel toolchain configuration in `toolchains_qnx/`:
+
+**Directory Structure:**
+```
+toolchains_qnx/
+├── toolchains/
+│   ├── qcc/                # QNX C/C++ compiler toolchain
+│   │   ├── BUILD           # Toolchain targets
+│   │   └── cc_toolchain_config.bzl  # Compiler flags, features
+│   └── fs/                 # Filesystem toolchain
+│       ├── BUILD           # IFS toolchain registration
+│       └── toolchain.bzl   # IFS build implementation
+├── rules/
+│   └── fs/
+│       ├── ifs.bzl         # qnx_ifs() rule definition
+│       └── BUILD
+├── platforms/
+│   └── BUILD               # x86_64-qnx platform definition
+└── extensions.bzl          # Bazel module extension
+```
 
 **Key Features:**
-- Cross-compilation for QNX x86_64
-- GNU++14 C++ standard
-- QCC compiler wrapper
-- Sandboxed builds with license support
+- **Cross-compilation:** QCC wrapper for QNX target compilation
+- **C++ Standard:** GNU++14 with full C++14 STL support
+- **Compiler:** QCC 8.3.0 (GCC-based)
+- **Sandboxing:** Enabled with QNX license directory mounting
+- **IFS Generation:** Custom Bazel rule (`qnx_ifs`) for building bootable images
 
-### QNX SDP Integration
-The `qnx_sdp/` directory contains the QNX SDP 8.0 repository setup:
-- `qnx_sdp/qnx_sdp_setup.bzl` - Repository setup
-- `qnx_sdp/variables.bzl` - SDP paths and versions
-- `qnx_sdp/qnx_sdp.BUILD` - Comprehensive filegroups
-- `qnx_sdp/wrappers/qcc_wrapper.sh` - QCC compiler wrapper
+**Compiler Flags:**
+- `-O2` - Optimization level 2
+- `-Wall -Wextra` - Comprehensive warnings
+- `-std=gnu++14` - GNU C++14 standard
+- `-fno-exceptions` - No C++ exceptions (embedded)
+- `-fno-rtti` - No runtime type information
+
+**Platform:**
+- `//toolchains_qnx/platforms:x86_64-qnx` - QNX x86_64 target
+- CPU: `x86_64`
+- Constraint: `@platforms//os:qnx`
+
+### QNX IFS (Image Filesystem) Build Process
+
+**IFS Build Rule (`qnx_ifs` in rules/fs/ifs.bzl):**
+
+The custom `qnx_ifs` Bazel rule generates bootable QNX images:
+
+```python
+qnx_ifs(
+    name = "example_ifs",           # Target name
+    srcs = [                        # Input files (binaries, libs, policies)
+        "//app:my_app",
+        "//common:tools_build",
+    ],
+    out = "example.ifs",            # Output IFS filename
+    build_file = "//path:example_build",  # IFS configuration (.build file)
+    ext_repo_maping = {             # Variable substitutions
+        "APP_PATH": "$(location //app:my_app)",
+    },
+)
+```
+
+**Parameters:**
+- `srcs`: List of binary dependencies (compiled apps, libraries)
+- `out`: Output IFS image filename (`.ifs` extension)
+- `build_file`: IFS configuration file (`.build` format)
+- `ext_repo_maping`: Key-value substitutions for build file variables
+
+**Build Process:**
+1. Compile C++ applications with QCC toolchain
+2. Collect dependencies (binaries, libraries, config files)
+3. Substitute variables in `.build` file
+4. Run `mkifs` to create bootable IFS image
+5. Output: Single bootable `.ifs` file containing entire system
+
+**IFS Build File Format (`.build` files):**
+
+IFS build files define the image contents and boot configuration:
+
+```bash
+# Image size allocation
+[image=0x200000]
+
+# Boot section - what runs at startup
+[virtual=x86_64,multiboot] boot = {
+    startup-x86 -D 8250          # Startup program with serial driver
+    PATH=/proc/boot:/bin         # System PATH
+    LD_LIBRARY_PATH=/proc/boot:/lib  # Library search path
+    procnto-smp-instr            # QNX microkernel (SMP, instrumented)
+}
+
+# Startup script - runs after kernel boot
+[+script] startup-script = {
+    slogger2 &                   # Start system logger
+    /proc/boot/my_app &          # Start custom application
+    [+session] ksh &             # Start interactive shell
+}
+
+# Application binaries
+my_app=${APP_PATH}               # Variable substitution from Bazel
+
+# Include common utilities
+[+include] common/tools.build
+```
+
+**Key Sections:**
+- `[image=SIZE]`: Allocate image size
+- `[virtual=ARCH,multiboot] boot`: Boot configuration
+- `[+script] startup-script`: Init script
+- `[+session]`: Interactive session (with TTY)
+- `[+include]`: Include other build files
+- `[type=link]`: Create symbolic links
+- Variable expansion: `${VAR_NAME}` from `ext_repo_maping`
 
 ---
 
 ## Environment Setup
 
-### Common Build Scripts
-All modules use a common environment setup script located at `scripts/qnx_common.sh`:
+### Automatic Setup (Recommended)
 
-**Features:**
-- Automatic QNX environment variable setup
-- Workspace root auto-detection
-- Color-coded output functions (`qnx_print_success`, `qnx_print_error`, etc.)
-- Consistent environment across all modules
+The Bazel build system automatically configures the QNX environment. Just ensure QNX SDP 8.0 is installed at `/home/qnx/qnx800`.
 
-**Environment Variables Set:**
+**Environment Variables (automatically set by Bazel):**
 ```bash
-export QNX_HOST=/home/qnx/qnx800/host/linux/x86_64
-export QNX_TARGET=/home/qnx/qnx800/target/qnx
-export QNX_CONFIGURATION=/home/qnx/.qnx
-export PATH=$QNX_HOST/usr/bin:$PATH
+QNX_HOST=/home/qnx/qnx800/host/linux/x86_64
+QNX_TARGET=/home/qnx/qnx800/target/qnx
+QNX_CONFIGURATION=/home/qnx/.qnx
+PATH=$QNX_HOST/usr/bin:$PATH
 ```
 
 ### Manual Environment Setup (Optional)
-If you need to set up the environment manually:
+
+For manual command-line work outside Bazel:
+
 ```bash
+# Create environment setup script
 cat > ~/qnx_env.sh << 'EOF'
 #!/bin/bash
 export QNX_HOST=/home/qnx/qnx800/host/linux/x86_64
 export QNX_TARGET=/home/qnx/qnx800/target/qnx
 export QNX_CONFIGURATION=/home/qnx/.qnx
 export PATH=$QNX_HOST/usr/bin:$PATH
-echo "QNX environment configured"
+echo "QNX environment configured:"
+echo "  QNX_HOST: $QNX_HOST"
+echo "  QNX_TARGET: $QNX_TARGET"
 EOF
 
 chmod +x ~/qnx_env.sh
 source ~/qnx_env.sh
 ```
 
+### Bazel Configuration (`.bazelrc`)
+
+The `.bazelrc` file configures Bazel for QNX builds:
+
+```bash
+# QNX x86_64 platform
+build --platforms=//toolchains_qnx/platforms:x86_64-qnx
+
+# Sandbox configuration for QNX license
+build --experimental_writable_outputs
+build --sandbox_add_mount_pair=/home/qnx/.qnx
+
+# Execution strategy
+build --spawn_strategy=local
+build --genrule_strategy=local
+
+# Disable remote caching (local builds)
+build --remote_cache=
+```
+
+**Key Settings:**
+- `--platforms`: Sets target platform to QNX x86_64
+- `--sandbox_add_mount_pair`: Mounts QNX license directory in sandbox
+- `--spawn_strategy=local`: Runs builds locally (not sandboxed)
+- `--experimental_writable_outputs`: Allows writing to output directories
+
 ---
 
 ## Troubleshooting
 
-### QEMU Won't Start
+### Build Failures
+
+#### License Issues
+```bash
+# Error: "license check failed"
+# Solution: Check QNX license file
+ls -la ~/.qnx/license/
+
+# Ensure license file exists and is readable
+chmod 644 ~/.qnx/license/licenses
+```
+
+#### QNX_TARGET Not Found
+```bash
+# Error: "QNX_TARGET not found"
+# Solution: Verify QNX SDP installation
+ls -la /home/qnx/qnx800/target/qnx
+
+# If missing, install QNX SDP 8.0
+```
+
+#### Bazel Cache Issues
+```bash
+# Clean Bazel cache and rebuild
+bazel clean --expunge
+bazel build //module_1:qnx_minimal_ifs
+```
+
+### QEMU Issues
+
+#### QEMU Not Found
 ```bash
 # Check QEMU installation
 qemu-system-x86_64 --version
 
-# Install if missing
+# Install if missing (Ubuntu/Debian)
+sudo apt update
 sudo apt install qemu-system-x86
+
+# Install if missing (Fedora/RHEL)
+sudo dnf install qemu-system-x86
 ```
 
-### Build Failures
+#### QEMU Hangs on Boot
 ```bash
-# Clean Bazel cache
-bazel clean --expunge
+# Issue: Black screen, no output
+# Solution: Check QEMU parameters in run_qemu.sh
+# Ensure: -serial stdio -display none are set
 
-# Verify QNX_TARGET
-echo $QNX_TARGET
-export QNX_TARGET=/home/qnx/qnx800/target/qnx
+# Try with different CPU model
+qemu-system-x86_64 -kernel module_1/qnx_minimal.ifs \
+  -cpu max -m 2048 -serial stdio -display none -no-reboot
+```
 
-# Check license
-ls -la ~/.qnx/license/
+#### QEMU Exits Immediately
+```bash
+# Check IFS image integrity
+ls -lh module_1/qnx_minimal.ifs
+
+# Re-build the image
+bazel clean
+bazel build //module_1:qnx_minimal_ifs
+bazel run //module_1:run_qemu
+```
+
+### Runtime Issues
+
+#### Processes Failing to Start
+```bash
+# Error: "Unable to start XYZ (2)"
+# Cause: Binary not included in IFS or missing dependencies
+
+# Solution: Check .build file includes the binary
+# Verify dependencies in BUILD file srcs list
+```
+
+#### IPC Connection Failures (Module 3)
+```bash
+# Error: "Connection attempt failed, retrying..."
+# Cause: name_attach() called with incorrect path
+
+# Solution: Use simple names, not paths
+# Correct: name_attach(NULL, "qnx_receiver", 0)
+# Wrong: name_attach(NULL, "/tmp/qnx_receiver", 0)
+```
+
+#### Security Policy Not Enforced (Module 4)
+```bash
+# Issue: sender2 connects when it should be denied
+# Cause: secpolpush not called or policy not loaded
+
+# Solution: Verify in .build file:
+# 1. secpol.bin is included at /proc/boot/
+# 2. secpolpush is called before starting processes
+# 3. Processes started with: on -T <type> /proc/boot/app
 ```
 
 ---
@@ -265,37 +620,122 @@ ls -la ~/.qnx/license/
 ## Learning Path
 
 **Recommended Order:**
-1. **Module 1** - Get comfortable with basic QNX application development (30 minutes)
-2. **Module 2** - Explore QNX system utilities and bash (30 minutes)
-3. **Module 3** - Learn QNX-specific IPC mechanisms (1 hour)
-4. **Module 4** - Understand security policies (1.5 hours)
-5. **Module 5** - Implement secure boot (1 hour)
 
-**Total:** ~4.5 hours for complete training
+1. **Module 1 - Hello World** (15-30 min)
+   - Get comfortable with basic QNX application development
+   - Understand IFS image structure and Bazel builds
+   - Learn QEMU usage
+
+2. **Module 2 - Extended System** (30-45 min)
+   - Explore QNX system utilities and shell
+   - Understand system services and daemons
+   - Work with interactive ksh shell
+
+3. **Module 3 - IPC Communication** (45-60 min)
+   - Learn QNX-specific message passing IPC
+   - Implement synchronous communication
+   - Handle multiple concurrent clients
+
+4. **Module 4 - Security Policies** (60-90 min)
+   - Understand mandatory access control
+   - Write security policy definitions
+   - Implement authorized/unauthorized access patterns
+
+5. **Module 5 - Secure Boot** (60 min)
+   - Learn cryptographic signing and verification
+   - Implement secure boot chain
+   - Detect tampering and integrity violations
+
+**Total Time:** ~4-5 hours for complete training
+
+**Prerequisites by Module:**
+- Module 1: None
+- Module 2: Module 1 completed
+- Module 3: Module 2 completed, understand IPC concepts
+- Module 4: Module 3 completed, understand QNX security model
+- Module 5: Module 4 completed, understand cryptography basics
 
 ---
 
-## Documentation
+## Additional Documentation
 
-For detailed step-by-step instructions, learning objectives, and complete documentation, see **[TRAINING.md](TRAINING.md)**.
+- **[TRAINING.md](TRAINING.md)** - Detailed step-by-step training guide with explanations
+- **Module READMEs:**
+  - [Module 3: IPC Communication](module_3/README.md)
+  - [Module 4: Security Policies](module_4/README.md)
+  - [Module 5: Secure Boot](module_5/README.md)
+- **[toolchains_qnx/README.md](toolchains_qnx/README.md)** - Bazel toolchain documentation
 
 ---
 
 ## Support and Resources
 
-- **QNX Documentation:** https://www.qnx.com/developers/docs/
-- **Module READMEs:** Each module has detailed documentation
-- **Build Scripts:** Well-commented for learning
+- **QNX Official Documentation:** https://www.qnx.com/developers/docs/8.0/
+- **QNX Community Forums:** https://community.qnx.com/
+- **Bazel Documentation:** https://bazel.build/
+- **QNX Security System:** https://www.qnx.com/developers/docs/8.0/com.qnx.doc.security.system/
+
+### Useful QNX Commands
+
+**System Information:**
+```bash
+pidin info                    # System information
+pidin mem                     # Memory usage
+uname -a                      # Kernel version
+```
+
+**Process Management:**
+```bash
+pidin                         # List all processes
+slay process_name             # Kill process by name
+slay -9 PID                   # Force kill by PID
+nice -n 10 command            # Run with priority
+```
+
+**System Logs:**
+```bash
+slog2info                     # View system logs
+slog2info -w                  # Watch logs (follow mode)
+```
 
 ---
 
-## License
+## License and Copyright
 
-Training materials for educational purposes.
-QNX Neutrino RTOS © QNX Software Systems Limited.
+**Training Materials:**
+Educational purposes only.
+
+**QNX Neutrino RTOS:**
+© QNX Software Systems Limited. All rights reserved.
+QNX, QNX Neutrino, and related marks are trademarks of BlackBerry Limited.
 
 ---
 
-**Happy Learning!**
+## Contributing
 
-*This training provides hands-on experience with QNX Neutrino RTOS from basic applications to advanced security features.*
+This is a training repository. If you find issues or have improvements:
+
+1. Document the problem clearly
+2. Provide steps to reproduce
+3. Suggest a fix with explanation
+4. Test thoroughly across all affected modules
+
+---
+
+**Happy Learning! 🚀**
+
+*This comprehensive training takes you from basic QNX development to advanced security features, providing hands-on experience with real-world QNX Neutrino RTOS concepts.*
+
+---
+
+**Quick Reference Card:**
+
+| Module | Time | Key Topic | Command |
+|--------|------|-----------|---------|
+| 1 | 30m | Hello World | `bazel run //module_1:run_qemu` |
+| 2 | 45m | System Tools | `bazel run //module_2:run_qemu` |
+| 3 | 60m | IPC | `bazel run //module_3:run_qemu` |
+| 4 | 90m | Security | `bazel run //module_4:run_qemu` |
+| 5 | 60m | Secure Boot | `bazel run //module_5:run_qemu` |
+
+**Next Steps:** Start with `bazel run //module_1:run_qemu` and follow the [TRAINING.md](TRAINING.md) guide!

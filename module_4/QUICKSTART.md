@@ -9,15 +9,14 @@ Module 4 demonstrates **QNX Security Policies and Access Control** through a pra
 
 ## Quick Build & Run
 
-```bash
-# Navigate to module
-cd /home/qnx/workspace/qnx/module_4
+From the workspace root:
 
+```bash
 # Build everything
-./build_image.sh
+bazel build //module_4:ipc_secure_ifs
 
 # Run in QEMU
-./run_qemu.sh
+bazel run //module_4:run_qemu
 ```
 
 ## What You'll See
@@ -119,7 +118,7 @@ sloginfo                       # View system logs
 ## Troubleshooting
 
 **Build fails**: Check QNX environment is set (`echo $QNX_HOST`)
-**Image not found**: Run `./build_image.sh` first
+**Image not found**: Run `bazel build //module_4:ipc_secure_ifs` first
 **QEMU won't start**: Ensure qemu-system-x86_64 is installed
 
 For detailed help, see README.md sections:

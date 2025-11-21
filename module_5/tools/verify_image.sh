@@ -44,12 +44,12 @@ TOTAL_SIZE=$(stat -c%s "$SIGNED_IFS")
 IMAGE_SIZE=$((TOTAL_SIZE - SIG_SIZE))
 
 echo "Total size:  $TOTAL_SIZE bytes"
-echo "Image size:  $IMAGE_SIZE bytes"
+echo "Image size:  $IFS_IMAGE_SIZE bytes"
 echo ""
 
 # Extract original image (without signature)
 echo "Extracting original image..."
-dd if="$SIGNED_IFS" of="/tmp/qnx_unsigned.ifs" bs=1 count="$IMAGE_SIZE" 2>/dev/null
+dd if="$SIGNED_IFS" of="/tmp/qnx_unsigned.ifs" bs=1 count="$IFS_IMAGE_SIZE" 2>/dev/null
 
 # Calculate hash of extracted image
 echo "Calculating image hash..."

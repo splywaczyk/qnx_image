@@ -2,8 +2,10 @@
 # Extended QNX image with bash and utilities
 
 [image=0x200000]
-[virtual=x86_64,bios +compress] boot = {
-    startup-x86
+
+[virtual=x86_64,multiboot] boot = {
+    # Use startup-x86 with 8250 serial for QEMU
+    startup-x86 -D 8250
     PATH=/proc/boot:/bin:/usr/bin:/sbin:/usr/sbin
     LD_LIBRARY_PATH=/proc/boot:/lib:/usr/lib:/lib/dll
     procnto-smp-instr
@@ -12,101 +14,27 @@
 [+script] startup-script = {
     # Start system services
     slogger2 &
+    waitfor /dev/slog 1
 
     # Start PCI server (for device enumeration)
     pci-server &
 
-    # Start random number generator (needed by some utilities)
-    random -t &
-
-    # Create essential directories
-    mkdir -p /tmp /var/log /etc /root /home
-
-    # Mount /tmp as RAM disk
-    mount -T io-pkt /dev/shmem /tmp
-
-    sleep 1
-
     # Welcome message
-    echo ""
-    echo "============================================="
-    echo "  QNX Extended System"
-    echo "============================================="
-    echo "  Hostname: qnx-training"
-    echo "  Kernel: QNX Neutrino 8.0"
-    echo "  Shell: ksh (with toybox utilities)"
-    echo "============================================="
-    echo ""
+    display_msg ""
+    display_msg "============================================="
+    display_msg "      Hello QNX World from IFS image!"
+    display_msg "============================================="
+    display_msg ""
+    display_msg "============================================="
+    display_msg " Available commands: ls, cat, grep, ps, etc."
+    display_msg "============================================="
+    display_msg ""
 
-    # Run our hello world application
-    /proc/boot/hello_world
-
-    echo ""
-    echo "Available commands: ls, cat, grep, ps, pidin, slay, etc."
-    echo "Type 'help' for more information"
-    echo ""
-
-    # Start ksh as login shell
-    [+session pri=25] ksh &
+    # Start sh as login shell on serial console
+    [+session] /bin/sh &
 }
 
-# Symlinks
-[type=link] /bin/sh=/proc/boot/ksh
-[type=link] /tmp=/dev/shmem
-[type=link] /var/log=/tmp
-[type=link] /dev/console=/dev/ser1
+[type=link] /usr/bin/custom/hello_world=/proc/boot/hello_world
+hello_world=${BIN_PATH}
 
-# Libraries
-libc.so = ${QNX_TARGET}/x86_64/lib/libc.so
-libstdc++.so.6 = ${QNX_TARGET}/x86_64/lib/libstdc++.so.6
-libm.so.3 = ${QNX_TARGET}/x86_64/lib/libm.so.3
-libgcc_s.so.1 = ${QNX_TARGET}/x86_64/lib/libgcc_s.so.1
-libsocket.so = ${QNX_TARGET}/x86_64/lib/libsocket.so
-
-# System services
-slogger2 = ${QNX_TARGET}/x86_64/bin/slogger2
-pci-server = ${QNX_TARGET}/x86_64/sbin/pci-server
-random = ${QNX_TARGET}/x86_64/usr/sbin/random
-
-# Toybox - provides most Unix utilities
-toybox = ${QNX_TARGET}/x86_64/usr/bin/toybox
-
-# Create symlinks for common utilities via toybox
-[type=link] ls=toybox
-[type=link] cat=toybox
-[type=link] cp=toybox
-[type=link] mv=toybox
-[type=link] rm=toybox
-[type=link] mkdir=toybox
-[type=link] chmod=toybox
-[type=link] touch=toybox
-[type=link] ln=toybox
-[type=link] echo=toybox
-[type=link] grep=toybox
-[type=link] sed=toybox
-[type=link] head=toybox
-[type=link] tail=toybox
-[type=link] ps=toybox
-[type=link] uname=toybox
-[type=link] date=toybox
-[type=link] sleep=toybox
-[type=link] env=toybox
-[type=link] mount=toybox
-
-# QNX-specific utilities (not in toybox)
-pidin = ${QNX_TARGET}/x86_64/bin/pidin
-slay = ${QNX_TARGET}/x86_64/bin/slay
-ksh = ${QNX_TARGET}/x86_64/bin/ksh
-
-# Utilities from QNX bin
-awk = ${QNX_TARGET}/x86_64/usr/bin/awk
-less = ${QNX_TARGET}/x86_64/usr/bin/less
-nice = ${QNX_TARGET}/x86_64/usr/bin/nice
-renice = ${QNX_TARGET}/x86_64/usr/bin/renice
-hostname = ${QNX_TARGET}/x86_64/bin/hostname
-uptime = ${QNX_TARGET}/x86_64/usr/bin/uptime
-umount = ${QNX_TARGET}/x86_64/bin/umount
-clear = ${QNX_TARGET}/x86_64/usr/bin/clear
-
-# Our application
-hello_world = ${WORKSPACE_ROOT}/bazel-bin/module_1/src/hello_world
+[+include] module_common/buildfiles/tools.build

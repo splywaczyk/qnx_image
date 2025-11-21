@@ -2,11 +2,13 @@
 # QNX image with secure boot demonstration
 
 [image=0x200000]
-[virtual=x86_64,bios +compress] boot = {
-    startup-x86
+
+[virtual=x86_64,multiboot] boot = {
+    # Use startup-x86 with 8250 serial for QEMU
+    startup-x86 -v -D 8250
     PATH=/proc/boot:/bin:/usr/bin
     LD_LIBRARY_PATH=/proc/boot:/lib:/usr/lib
-    procnto-smp-instr
+    procnto-smp-instr -v
 }
 
 [+script] startup-script = {
@@ -17,43 +19,18 @@
 
     sleep 1
 
-    echo ""
-    echo "============================================="
-    echo "  QNX Secure Boot Demo"
-    echo "============================================="
-    echo ""
+    display_msg ""
+    display_msg "============================================="
+    display_msg "  QNX Secure Boot Demo"
+    display_msg "============================================="
+    display_msg ""
 
     # Run secure boot verifier
     /proc/boot/verify_boot
 
-    echo ""
-    echo "Type 'exit' or press Ctrl+A then X to quit"
-    echo ""
-
     [+session] sh &
 }
 
-[type=link] /bin/sh=/proc/boot/ksh
-[type=link] /tmp=/dev/shmem
-[type=link] /dev/console=/dev/ser1
+[+include] module_common/buildfiles/tools.build
 
-# Libraries (startup-x86 and procnto-smp-instr auto-discovered from boot line)
-libc.so = ${QNX_TARGET}/x86_64/lib/libc.so
-libstdc++.so.6 = ${QNX_TARGET}/x86_64/lib/libstdc++.so.6
-libm.so.3 = ${QNX_TARGET}/x86_64/lib/libm.so.3
-libgcc_s.so.1 = ${QNX_TARGET}/x86_64/lib/libgcc_s.so.1
-
-# System services
-slogger2 = ${QNX_TARGET}/x86_64/bin/slogger2
-random = ${QNX_TARGET}/x86_64/usr/sbin/random
-
-# Shell and utilities
-ksh = ${QNX_TARGET}/x86_64/bin/ksh
-
-# Toybox utilities
-toybox = ${QNX_TARGET}/x86_64/usr/bin/toybox
-[type=link] echo=toybox
-[type=link] sleep=toybox
-[type=link] mkdir=toybox
-
-verify_boot = ${WORKSPACE_ROOT}/bazel-bin/module_5/src/verify_boot
+verify_boot=${BIN_PATH}
