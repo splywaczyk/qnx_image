@@ -195,10 +195,10 @@ cd module_3
 ```
 
 **Components:**
-- `src/receiver_secure.cpp` - Secure receiver with policy enforcement
-- `src/sender1_secure.cpp` - Authorized sender (ALLOWED)
-- `src/sender2_secure.cpp` - Unauthorized sender (DENIED)
-- `secpol/ipc_policy.sp` - Security policy definition
+- `module_common/apps/receiver/` - Secure receiver with policy fragment
+- `module_common/apps/sender_a/` - Authorized sender (ALLOWED) with policy
+- `module_common/apps/sender_b/` - Unauthorized sender (DENIED) with policy
+- `secpol/BUILD` - Compiles modular security policy fragments
 
 **Build & Run:**
 ```bash
@@ -337,7 +337,7 @@ config/
 ```bash
 # Build just the applications
 bazel build //module_1/src:hello_world --platforms=//bazel/platforms:qnx_x86_64
-bazel build //module_common/apps/sender_receiver:receiver //module_common/apps/sender_receiver:sender1 //module_common/apps/sender_receiver:sender2 --platforms=//bazel/platforms:qnx_x86_64
+bazel build //module_common/apps/receiver:receiver //module_common/apps/sender_a:sender_a //module_common/apps/sender_b:sender_b --platforms=//bazel/platforms:qnx_x86_64
 ```
 
 ### Create IFS Image Only

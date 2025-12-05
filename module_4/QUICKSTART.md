@@ -30,21 +30,27 @@ bazel run //module_4:run_qemu
 
 | File | Purpose |
 |------|---------|
-| `src/receiver_secure.cpp` | Secure receiver with EACCES/EPERM handling |
-| `src/sender1_secure.cpp` | Authorized sender (ALLOWED) |
-| `src/sender2_secure.cpp` | Unauthorized sender (DENIED) |
-| `secpol/ipc_policy.sp` | Security policy rules |
-| `buildfiles/ipc_secure.build` | IFS with procnto -S flag |
+| `module_common/apps/receiver/receiver.cpp` | Secure receiver with EACCES/EPERM handling |
+| `module_common/apps/receiver/receiver.secpol` | Receiver security policy fragment |
+| `module_common/apps/sender_a/sender_a.cpp` | Authorized sender (ALLOWED) |
+| `module_common/apps/sender_a/sender_a.secpol` | Sender A security policy fragment |
+| `module_common/apps/sender_b/sender_b.cpp` | Unauthorized sender (DENIED) |
+| `module_common/apps/sender_b/sender_b.secpol` | Sender B security policy fragment |
+| `secpol/BUILD` | Compiles modular policy fragments |
+| `buildfiles/ipc_secure.build` | IFS with secpolpush enforcement |
 | `README.md` | Complete documentation |
 
 ## Security Policy Summary
 
-```
-Rule 1: ALLOW sender1 → receiver_secure (priority 10)
-Rule 2: DENY sender2 → receiver_secure (priority 20)
-Rule 3: ALLOW receiver operations (priority 5)
-Default: DENY all
-```
+**Modular Policy Architecture:**
+- `receiver.secpol`: Defines receiver_secure_t type, name attachment rule
+- `sender_a.secpol`: Defines sender_a_secure_t type, **ALLOW** connection to receiver
+- `sender_b.secpol`: Defines sender_b_secure_t type, **NO** connection rule (denied)
+
+**Security Model:**
+- Default: DENY all (whitelist approach)
+- Type-based: Mandatory Access Control (MAC)
+- Rule: `allow sender_a_secure_t receiver_secure_t:channel connect;`
 
 ## Architecture
 
@@ -110,9 +116,15 @@ sloginfo                       # View system logs
 ## Next Steps
 
 1. Read the full README.md for detailed explanations
-2. Examine the security policy file (secpol/ipc_policy.sp)
-3. Study the error handling in receiver_secure.cpp
-4. Modify the policy and test changes
+2. Examine the modular security policy fragments:
+   - `module_common/apps/receiver/receiver.secpol`
+   - `module_common/apps/sender_a/sender_a.secpol`
+   - `module_common/apps/sender_b/sender_b.secpol`
+3. Study the error handling in receiver.cpp
+4. Modify a policy fragment and rebuild:
+   ```bash
+   bazel build //module_4/secpol:ipc_policy_compile
+   ```
 5. Proceed to Module 5 for advanced topics
 
 ## Troubleshooting

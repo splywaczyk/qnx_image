@@ -30,22 +30,23 @@ By completing this module, you will understand:
 ```
 ┌─────────────────────────────────────────────────────────┐
 │                   QNX Security Layer                    │
-│  (procnto -S enables security policy enforcement)       │
+│           (secpolpush enables enforcement)              │
 └─────────────────┬───────────────────────────────────────┘
                   │
-                  ├── Security Policy: ipc_policy.sp
-                  │   ├── ALLOW: sender1 → receiver
-                  │   └── DENY:  sender2 → receiver
+                  ├── Modular Security Policy
+                  │   ├── receiver.secpol  (defines receiver_secure_t)
+                  │   ├── sender_a.secpol  (ALLOW → receiver)
+                  │   └── sender_b.secpol  (DENY → receiver)
                   │
        ┌──────────┴──────────┐
        │                     │
    ┌───▼────┐           ┌───▼────┐
-   │ sender1│           │ sender2│
+   │sender_a│           │sender_b│
    │(ALLOW) │           │(DENY)  │
    └───┬────┘           └───┬────┘
        │                    │
        │  ✓ Authorized      │  ✗ Blocked
-       │                    │  (EACCES/EPERM)
+       │                    │  (ENOENT)
        │                    │
        └────────┬───────────┘
                 │
@@ -62,67 +63,98 @@ module_4/
 ├── README.md                  # This file
 ├── QUICKSTART.md              # Quick start guide
 ├── BUILD                      # Bazel package with qnx_ifs rule
-├── src/                       # Source code
-│   ├── BUILD                  # Bazel build file for C++ binaries
-│   ├── receiver_secure.cpp    # Secure message receiver
-│   ├── sender1_secure.cpp     # Authorized sender
-│   └── sender2_secure.cpp     # Unauthorized sender
-├── secpol/                    # Security policies
-│   ├── BUILD                  # Bazel filegroup for policy file
-│   └── ipc_policy.sp          # IPC access control policy
-└── buildfiles/                # IFS build files
-    ├── BUILD                  # Bazel filegroup for build file
-    └── ipc_secure.build       # Secure IPC system image
+├── secpol/                    # Security policy compilation
+│   └── BUILD                  # Compiles modular policy fragments
+├── buildfiles/                # IFS build files
+│   ├── BUILD                  # Bazel filegroup for build file
+│   └── ipc_secure.build       # Secure IPC system image
+└── run_qemu.sh                # QEMU launcher script
+
+module_common/apps/            # Shared application components
+├── receiver/                  # Secure message receiver
+│   ├── BUILD                  # Build for receiver + policy fragment
+│   ├── receiver.cpp           # Receiver implementation
+│   └── receiver.secpol        # Receiver security policy fragment
+├── sender_a/                  # Authorized sender
+│   ├── BUILD                  # Build for sender_a + policy fragment
+│   ├── sender_a.cpp           # Sender A implementation
+│   └── sender_a.secpol        # Sender A security policy fragment
+└── sender_b/                  # Unauthorized sender
+    ├── BUILD                  # Build for sender_b + policy fragment
+    ├── sender_b.cpp           # Sender B implementation
+    └── sender_b.secpol        # Sender B security policy fragment
 ```
+
+**Note**: Security policies are now modular - each application component has its own `.secpol` file that defines only its security type and permissions. These fragments are combined at build time by `secpolcompile`.
 
 ## Security Policy Explained
 
-### Policy File: `secpol/ipc_policy.sp`
+### Modular Policy Architecture
 
-The security policy defines three subjects (processes) and their access rights:
+The security policy is now split into three fragments, each co-located with its application:
 
-#### Subjects (Processes)
+1. **`receiver.secpol`** - Defines `receiver_secure_t` type and its permissions
+2. **`sender_a.secpol`** - Defines `sender_a_secure_t` type (authorized)
+3. **`sender_b.secpol`** - Defines `sender_b_secure_t` type (unauthorized)
 
-1. **sender1** - Authorized sender
-   - Path: `/proc/boot/sender1_secure`
-   - Actions: connect, send, receive_reply
-   - Decision: **ALLOW**
+These fragments are combined during build by `secpolcompile` to create a single `secpol.bin` binary.
 
-2. **sender2** - Unauthorized sender
-   - Path: `/proc/boot/sender2_secure`
-   - Actions: connect, send
-   - Decision: **DENY**
+### Benefits of Modular Approach
 
-3. **receiver** - Message receiver
-   - Path: `/proc/boot/receiver_secure`
-   - Actions: create_channel, receive, reply
-   - Decision: **ALLOW**
+- **Separation of Concerns**: Each component owns its security definition
+- **Maintainability**: Changes to one component don't affect others
+- **Flexibility**: Easy to add/remove components
+- **Co-location**: Policy lives with the code it protects
 
-#### Objects (Resources)
+### Policy Fragments
 
-- **receiver_channel**
-  - Type: channel
-  - Name: `/tmp/qnx_receiver_secure`
+The modular policy defines three types (processes) and their access rights:
 
-#### Rules
+#### Types (Security Labels)
 
-1. **allow_sender1** (priority 10)
-   - Permits sender1 to connect and communicate
-   - Audit: yes (log allowed operations)
+1. **receiver_secure_t** - Receiver process type
+   - Defined in: `module_common/apps/receiver/receiver.secpol`
+   - Can attach name: `/dev/name/local/qnx_receiver_secure`
+   - Ability: `able_create`
+   - Purpose: Receives messages from authorized senders
 
-2. **deny_sender2** (priority 20)
-   - Blocks sender2 from connecting
-   - Audit: yes (log denied operations)
+2. **sender_a_secure_t** - Authorized sender type
+   - Defined in: `module_common/apps/sender_a/sender_a.secpol`
+   - Can connect to: `receiver_secure_t:channel`
+   - Ability: `able_create`
+   - Purpose: Demonstrates successful authorized IPC
 
-3. **allow_receiver** (priority 5)
-   - Permits receiver to create channel and handle messages
-   - Audit: no
+3. **sender_b_secure_t** - Unauthorized sender type
+   - Defined in: `module_common/apps/sender_b/sender_b.secpol`
+   - **Cannot** connect to: `receiver_secure_t:channel` (no rule)
+   - Ability: `able_create`
+   - Purpose: Demonstrates security policy enforcement
 
-#### Default Policy
+#### Key Rules
 
-- **default_action**: DENY
-- **default_audit**: yes
-- All operations not explicitly allowed are denied
+1. **Name Attachment**
+   ```
+   allow_attach receiver_secure_t /dev/name/local/qnx_receiver_secure;
+   ```
+   - Receiver can register its IPC channel name
+
+2. **Channel Connection (AUTHORIZED)**
+   ```
+   allow sender_a_secure_t receiver_secure_t:channel connect;
+   ```
+   - sender_a can connect to receiver's channel
+
+3. **Implicit Deny (UNAUTHORIZED)**
+   - No rule for `sender_b_secure_t → receiver_secure_t:channel connect`
+   - Therefore sender_b is **denied by default**
+
+#### Security Model
+
+- **Default Policy**: Deny-All (whitelist approach)
+- **Type Enforcement**: Mandatory Access Control (MAC)
+- **Process Types**: Assigned at launch with `on -T <type>`
+- **Resource Inheritance**: Channels inherit creator's type
+- **Policy Activation**: `secpolpush` loads policy at boot
 
 ## Application Details
 
@@ -170,7 +202,7 @@ if (errno == EACCES || errno == EPERM) {
 
 - QNX SDP 8.0 installed
 - Bazel build system configured with S-CORE toolchains
-- QNX environment variables set
+- QNX environment variables set (QNX_HOST, QNX_TARGET, QNX_CONFIGURATION)
 - QEMU for x86_64
 
 ### Build Steps
@@ -178,18 +210,32 @@ if (errno == EACCES || errno == EPERM) {
 From the workspace root:
 
 ```bash
+# Build the compiled security policy from modular fragments
+bazel build //module_4/secpol:ipc_policy_compile
+
 # Build all applications and create secure IFS image
 bazel build //module_4:ipc_secure_ifs
 
 # The IFS image will be created at:
 # bazel-bin/module_4/ipc_secure.ifs
+
+# The compiled policy binary:
+# bazel-bin/module_4/secpol/secpol.bin
 ```
 
 **Build Process**:
-1. Compiles three C++ applications using Bazel
-2. Includes security policy file in the build
-3. Creates IFS image with procnto -S flag for security enforcement
-4. Packages all components with proper dependencies
+1. Compiles three C++ applications using Bazel (receiver, sender_a, sender_b)
+2. Collects security policy fragments from each application directory
+3. Runs `secpolcompile` to merge fragments into single `secpol.bin`
+4. Creates IFS image with `secpolpush` for security enforcement
+5. Launches processes with `on -T <type>` to assign security types
+6. Packages all components with proper dependencies
+
+**Key Build Features**:
+- Modular policy fragments enable independent component development
+- `secpolcompile` validates syntax and type references during build
+- QNX toolchain provides proper environment variables (QNX_HOST, QNX_TARGET)
+- Sandboxed build with license and SDK directory access
 
 ## Running the Demo
 
@@ -370,9 +416,12 @@ All security events are logged:
 
 ### Error: Security policy file not found
 
-**Cause**: Policy file missing from IFS image
+**Cause**: Policy binary missing from IFS image
 
-**Solution**: Verify `ipc_policy.sp` is in secpol/ directory
+**Solution**: Verify policy fragments exist and build succeeds:
+```bash
+bazel build //module_4/secpol:ipc_policy_compile
+```
 
 ### Error: procnto not started with -S flag
 
@@ -390,51 +439,89 @@ All security events are logged:
 
 ### Add a Third Sender (Authorized)
 
-1. Create `sender3_secure.cpp` (copy from sender1)
-2. Update policy to allow sender3
-3. Add to BUILD file
-4. Include in IFS buildfile
+With modular policies, adding a new component is straightforward:
 
-### Modify Security Rules
+1. **Create application directory**:
+   ```bash
+   mkdir -p module_common/apps/sender_c
+   ```
 
-Edit `secpol/ipc_policy.sp`:
+2. **Create sender_c.cpp** (copy from sender_a):
+   ```bash
+   cp module_common/apps/sender_a/sender_a.cpp module_common/apps/sender_c/sender_c.cpp
+   # Edit to change name
+   ```
+
+3. **Create sender_c.secpol** policy fragment:
+   ```bash
+   cat > module_common/apps/sender_c/sender_c.secpol <<'EOF'
+   type sender_c_secure_t;
+   allow sender_c_secure_t receiver_secure_t:channel connect;
+   allow sender_c_secure_t self:ability { able_create };
+   EOF
+   ```
+
+4. **Create BUILD file**:
+   ```python
+   cc_binary(
+       name = "sender_c",
+       srcs = ["sender_c.cpp"],
+       visibility = ["//visibility:public"],
+   )
+
+   filegroup(
+       name = "sender_c_secpol",
+       srcs = ["sender_c.secpol"],
+       visibility = ["//visibility:public"],
+   )
+   ```
+
+5. **Update module_4/secpol/BUILD** to include new fragment:
+   ```python
+   filegroup(
+       name = "secpol_files",
+       srcs = [
+           "//module_common/apps/receiver:receiver_secpol",
+           "//module_common/apps/sender_a:sender_a_secpol",
+           "//module_common/apps/sender_b:sender_b_secpol",
+           "//module_common/apps/sender_c:sender_c_secpol",  # Add this
+       ],
+   )
+   ```
+
+6. **Update IFS buildfile** to launch with security type:
+   ```bash
+   on -T sender_c_secure_t /proc/boot/sender_c &
+   ```
+
+### Modify Security Rules for Existing Component
+
+To change sender_b from unauthorized to authorized:
+
+Edit `module_common/apps/sender_b/sender_b.secpol`:
 
 ```
-# Example: Allow sender2 with limited permissions
-rule allow_sender2_limited {
-    subject: sender2
-    action: connect
-    object: receiver_channel
-    decision: ALLOW
-    audit: yes
-    priority: 15
-}
+type sender_b_secure_t;
+
+# Add this rule to authorize sender_b
+allow sender_b_secure_t receiver_secure_t:channel connect;
+
+allow sender_b_secure_t self:ability {
+    able_create
+};
 ```
 
-### Add Time-Based Restrictions
+Then rebuild: `bazel build //module_4/secpol:ipc_policy_compile`
 
-```
-rule allow_sender1_daytime {
-    subject: sender1
-    action: connect, send
-    object: receiver_channel
-    decision: ALLOW
-    time_range: 08:00-17:00
-    priority: 10
-}
-```
+### Remove a Component
 
-### Add Rate Limiting
+To remove sender_b:
 
-```
-rule rate_limit_sender1 {
-    subject: sender1
-    action: send
-    object: receiver_channel
-    rate_limit: 10/minute
-    decision: ALLOW
-}
-```
+1. Remove from `module_4/secpol/BUILD` srcs list
+2. Remove from IFS buildfile startup script
+3. Rebuild
+
+The policy fragment `sender_b.secpol` can stay in place (unused) or be deleted.
 
 ## Security Best Practices
 
@@ -508,8 +595,8 @@ bazel build //module_4:ipc_secure_ifs
 pidin | grep procnto
 # Should show: procnto-smp-instr -S
 
-# Verify policy loaded
-ls -l /proc/boot/ipc_policy.sp
+# Verify policy binary loaded
+ls -l /proc/boot/secpol.bin
 
 # Check logs
 sloginfo | grep -i security
@@ -526,14 +613,23 @@ procnto-smp-instr -S -vvv
 
 Module 4 demonstrates:
 
-- ✓ QNX security policy implementation
-- ✓ Access control for IPC resources
-- ✓ Security policy syntax and rules
-- ✓ Handling permission denied errors
-- ✓ Audit logging for security events
-- ✓ procnto security enforcement (-S flag)
+- ✓ QNX security policy implementation with Mandatory Access Control (MAC)
+- ✓ Modular security policy architecture (per-component fragments)
+- ✓ Type-based access control for IPC resources
+- ✓ Security policy syntax and rules (QNX policy language)
+- ✓ Handling permission denied errors (ENOENT for unauthorized access)
+- ✓ Security policy compilation with `secpolcompile`
+- ✓ Policy enforcement with `secpolpush` and `on -T <type>`
+- ✓ Default deny-all security model (whitelist approach)
 
-**Key Takeaway**: QNX security policies provide fine-grained, kernel-enforced access control that protects critical resources even from privileged processes.
+**Key Takeaway**: QNX security policies provide fine-grained, kernel-enforced access control that protects critical resources even from privileged processes. The modular policy approach enables scalable, maintainable security definitions that co-locate with application code.
+
+**Modular Security Benefits**:
+- Each component owns its security definition
+- Easy to add/remove/modify components
+- Better separation of concerns
+- Policies co-located with the code they protect
+- Scalable to large systems with many components
 
 ---
 

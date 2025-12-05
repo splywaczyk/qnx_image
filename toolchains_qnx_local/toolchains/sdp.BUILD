@@ -72,3 +72,8 @@ filegroup(
     name = "mkifs",
     srcs = ["host/linux/x86_64/usr/bin/mkifs"],
 )
+
+filegroup(
+    name = "secpolcompile",
+    srcs = ["host/linux/x86_64/usr/bin/secpolcompile"],
+)

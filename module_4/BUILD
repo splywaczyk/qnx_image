@@ -6,19 +6,19 @@ package(default_visibility = ["//visibility:public"])
 qnx_ifs(
     name = "ipc_secure_ifs",
     srcs = [
-        "//module_common/apps/sender_receiver:receiver",
-        "//module_common/apps/sender_receiver:sender1",
-        "//module_common/apps/sender_receiver:sender2",
-        "//module_4/secpol:ipc_policy",
+        "//module_common/apps/receiver:receiver",
+        "//module_common/apps/sender_a:sender_a",
+        "//module_common/apps/sender_b:sender_b",
+        "//module_4/secpol:ipc_policy_compile",
         "//module_common/buildfiles:tools_build"
     ],
     out = "ipc_secure.ifs",
     build_file = "//module_4/buildfiles:ipc_secure_build",
     ext_repo_maping = {
-        "RECEIVER_PATH": "$(location //module_common/apps/sender_receiver:receiver)",
-        "SENDER1_PATH": "$(location //module_common/apps/sender_receiver:sender1)",
-        "SENDER2_PATH": "$(location //module_common/apps/sender_receiver:sender2)",
-        "POLICY_PATH": "$(location //module_4/secpol:ipc_policy)",
+        "RECEIVER_PATH": "$(location //module_common/apps/receiver:receiver)",
+        "SENDER1_PATH": "$(location //module_common/apps/sender_a:sender_a)",
+        "SENDER2_PATH": "$(location //module_common/apps/sender_b:sender_b)",
+        "POLICY_PATH": "$(location //module_4/secpol:ipc_policy_compile)",
     },
 )
 

@@ -11,10 +11,13 @@
 #   - Explicit allow rules only
 #
 # Components:
-#   - Security policy: secpol.bin (compiled from ipc_policy.sp)
+#   - Security policy: secpol.bin (compiled from modular .secpol fragments)
+#     - receiver.secpol: Defines receiver_secure_t type
+#     - sender_a.secpol: Defines sender_a_secure_t type (authorized)
+#     - sender_b.secpol: Defines sender_b_secure_t type (unauthorized)
 #   - Receiver: Creates IPC channel with security type
-#   - Sender1: Authorized to connect (allowed by policy)
-#   - Sender2: Unauthorized to connect (denied by policy)
+#   - Sender A: Authorized to connect (allowed by policy)
+#   - Sender B: Unauthorized to connect (denied by policy)
 #
 # Variables used:
 #   ${POLICY_PATH}    - Path to compiled security policy binary
@@ -161,7 +164,7 @@
     on -T receiver_secure_t /proc/boot/receiver_secure &
     # on: Process launcher utility
     # -T receiver_secure_t: Assign security type "receiver_secure_t"
-    # Type definition: In ipc_policy.sp (type receiver_secure_t;)
+    # Type definition: In receiver.secpol (module_common/apps/receiver/)
     # Process: Creates IPC channel with security enforcement
     # Permissions: Can attach name to /dev/name/local/qnx_receiver_secure
     # & Run in background
@@ -214,16 +217,24 @@
 
 secpol.bin=${POLICY_PATH}
 # File: Compiled security policy binary
-# Source: ipc_policy.sp (QNX security policy language)
-# Compilation: secpolcompile -o secpol.bin ipc_policy.sp
+# Source: Modular .secpol fragments (QNX security policy language)
+#   - module_common/apps/receiver/receiver.secpol
+#   - module_common/apps/sender_a/sender_a.secpol
+#   - module_common/apps/sender_b/sender_b.secpol
+# Compilation: secpolcompile -o secpol.bin receiver.secpol sender_a.secpol sender_b.secpol
+# Build target: //module_4/secpol:ipc_policy_compile
 # Location in IFS: /proc/boot/secpol.bin (default location)
 # Size: ~600 bytes (binary format)
 # Format: Proprietary QNX binary format
 # Loading: Automatically loaded by secpolpush from /proc/boot/
 # Contents:
-#   - Type definitions (receiver_secure_t, sender1_secure_t, sender2_secure_t)
-#   - Allow rules (sender1 can connect to receiver's channel)
+#   - Type definitions (receiver_secure_t, sender_a_secure_t, sender_b_secure_t)
+#   - Allow rules (sender_a can connect to receiver's channel)
 #   - Default policy (deny all unless explicitly allowed)
+# Modular Benefits:
+#   - Each component owns its security definition
+#   - Policies co-located with application code
+#   - Easy to add/remove/modify components
 
 # ------------------------------------------------------------------------------
 # SECURE IPC APPLICATIONS
@@ -351,15 +362,15 @@ on = ${QNX_TARGET}/x86_64/bin/on
 #
 # Type System:
 #
-#   Type Definition (in .sp file):
-#     type receiver_secure_t;   # Type for receiver process
-#     type sender1_secure_t;    # Type for authorized sender
-#     type sender2_secure_t;    # Type for unauthorized sender
+#   Type Definition (in modular .secpol files):
+#     receiver.secpol:   type receiver_secure_t;   # Receiver process type
+#     sender_a.secpol:   type sender_a_secure_t;   # Authorized sender type
+#     sender_b.secpol:   type sender_b_secure_t;   # Unauthorized sender type
 #
 #   Type Assignment (in this file):
 #     on -T receiver_secure_t /proc/boot/receiver_secure &
-#     on -T sender1_secure_t /proc/boot/sender1_secure &
-#     on -T sender2_secure_t /proc/boot/sender2_secure &
+#     on -T sender_a_secure_t /proc/boot/sender_a_secure &
+#     on -T sender_b_secure_t /proc/boot/sender_b_secure &
 #
 #   Type Inheritance:
 #     - Child processes inherit parent's type
@@ -368,27 +379,32 @@ on = ${QNX_TARGET}/x86_64/bin/on
 #
 # Access Control Rules:
 #
-#   Allow Rule (in .sp file):
-#     allow sender1_secure_t receiver_secure_t:channel connect;
-#     # Meaning: Processes of type sender1_secure_t can connect to
+#   Allow Rule (in sender_a.secpol):
+#     allow sender_a_secure_t receiver_secure_t:channel connect;
+#     # Meaning: Processes of type sender_a_secure_t can connect to
 #     #          channels owned by processes of type receiver_secure_t
 #
-#   Name Attachment Rule (in .sp file):
+#   Name Attachment Rule (in receiver.secpol):
 #     allow_attach receiver_secure_t /dev/name/local/qnx_receiver_secure;
 #     # Meaning: Processes of type receiver_secure_t can attach (register)
 #     #          the name /dev/name/local/qnx_receiver_secure
 #
 #   Default Deny:
 #     - Any operation not explicitly allowed is denied
-#     - sender2_secure_t has no connection rule → denied
+#     - sender_b_secure_t has no connection rule → denied
 #
-# Policy Compilation:
+# Policy Compilation (Modular):
 #
-#   Source: ipc_policy.sp (human-readable policy language)
-#   Compiler: secpolcompile -o secpol.bin ipc_policy.sp
+#   Sources: Multiple .secpol fragments (human-readable policy language)
+#     - receiver.secpol (from module_common/apps/receiver/)
+#     - sender_a.secpol (from module_common/apps/sender_a/)
+#     - sender_b.secpol (from module_common/apps/sender_b/)
+#   Compiler: secpolcompile -o secpol.bin <all-fragments>
+#   Build: bazel build //module_4/secpol:ipc_policy_compile
 #   Output: secpol.bin (binary format for kernel)
 #   Validation: Compiler checks syntax, type references, rule validity
 #   Installation: Place at /proc/boot/secpol.bin in IFS
+#   Benefits: Co-location with code, separation of concerns, easy to modify
 #
 # Expected Output:
 #

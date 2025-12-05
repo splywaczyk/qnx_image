@@ -214,13 +214,6 @@ ksh = ${QNX_TARGET}/x86_64/bin/ksh
 # ------------------------------------------------------------------------------
 # Full-featured versions from QNX (not toybox)
 
-awk = ${QNX_TARGET}/x86_64/usr/bin/awk
-# Utility: Pattern scanning and processing language
-# Purpose: Text processing and data extraction
-# Note: Full GNU-compatible awk (more features than toybox awk)
-# Usage: awk '{print $1}' file.txt
-# Size: Larger than toybox awk but more capable
-
 less = ${QNX_TARGET}/x86_64/usr/bin/less
 # Utility: File pager (like more, but better)
 # Purpose: View files page-by-page with scrolling
@@ -241,18 +234,6 @@ renice = ${QNX_TARGET}/x86_64/usr/bin/renice
 # Usage:
 #   renice -n 5 -p PID     # Set priority to 5
 #   renice +10 -p PID      # Increase niceness by 10
-
-hostname = ${QNX_TARGET}/x86_64/bin/hostname
-# Utility: Get/set system hostname
-# Purpose: Display or change hostname
-# Usage:
-#   hostname               # Show current hostname
-#   hostname newname       # Set hostname (root only)
-
-uptime = ${QNX_TARGET}/x86_64/usr/bin/uptime
-# Utility: Show system uptime and load average
-# Purpose: See how long system has been running
-# Output: uptime, number of users, load averages (1, 5, 15 min)
 
 umount = ${QNX_TARGET}/x86_64/bin/umount
 # Utility: Unmount filesystems

@@ -1,0 +1,61 @@
+# ==============================================================================
+# QNX Security Policy Fragment: Receiver Component
+# ==============================================================================
+# This file contains security policy definitions for the receiver process.
+# It defines the receiver_secure_t type and its permissions.
+#
+# This fragment is meant to be combined with sender policy fragments to create
+# a complete security policy.
+#
+# Usage:
+#   secpolcompile -o secpol.bin receiver.secpol sender_a.secpol sender_b.secpol
+# ==============================================================================
+
+# ------------------------------------------------------------------------------
+# TYPE DEFINITION: RECEIVER
+# ------------------------------------------------------------------------------
+
+type receiver_secure_t;
+# Type: receiver_secure_t
+# Purpose: Security type for the IPC message receiver process
+# Assigned to: receiver application (via: on -T receiver_secure_t)
+# Resources owned:
+#   - IPC channel registered at /dev/name/local/qnx_receiver_secure
+#   - Channel inherits this type from creator process
+# Permissions:
+#   - Can attach (register) channel name
+#   - Receives connections only from authorized types
+
+# ------------------------------------------------------------------------------
+# NAME ATTACHMENT RULE: RECEIVER
+# ------------------------------------------------------------------------------
+
+allow_attach receiver_secure_t /dev/name/local/qnx_receiver_secure;
+# Rule: Allow name attachment for receiver
+# Who: receiver_secure_t processes
+# What: Can register name "/dev/name/local/qnx_receiver_secure"
+# API: name_attach(NULL, "qnx_receiver_secure", 0)
+# Effect:
+#   - Receiver process can successfully attach this name
+#   - Name becomes visible in /dev/name/local/ directory
+#   - Clients can find it with name_open("qnx_receiver_secure", 0)
+# Without this rule:
+#   - name_attach() would fail with EACCES (Permission denied)
+
+# ------------------------------------------------------------------------------
+# ABILITY GRANT: RECEIVER
+# ------------------------------------------------------------------------------
+
+allow receiver_secure_t self:ability {
+    able_create
+};
+# Grant: Dynamic ability creation for receiver
+# Who: receiver_secure_t processes
+# What: able_create ability (create new abilities at runtime)
+# Target: self (process itself)
+# Purpose:
+#   - Allows process to request additional capabilities at runtime
+#   - Required for some QNX system calls
+#   - Generally safe for application processes
+
+# ==============================================================================

@@ -1,9 +1,44 @@
-# Pre-compiled security policy binary
-# To recompile: export QNX_HOST=/home/qnx/qnx800/host/linux/x86_64 &&
-#               export QNX_TARGET=/home/qnx/qnx800/target/qnx &&
-#               /home/qnx/qnx800/host/linux/x86_64/usr/bin/secpolcompile -o secpol.bin ipc_policy.sp
+load("@score_toolchains_qnx//rules/secpolcompile:secpolcompile.bzl", "secpolcompile")
+
+# ==============================================================================
+# QNX Security Policy Compilation - Modular Approach
+# ==============================================================================
+# This BUILD file compiles security policies from modular component fragments.
+# Each application component (receiver, sender_a, sender_b) has its own policy
+# fragment that defines its security type and permissions.
+#
+# Benefits of modular approach:
+#   - Better separation of concerns (each component owns its policy)
+#   - Easier to maintain (changes to one component don't affect others)
+#   - More flexible (can add/remove components by changing srcs list)
+#   - Co-located with application code (policy lives with the app)
+#
+# The secpolcompile tool accepts multiple .secpol files and merges them into
+# a single binary policy file (secpol.bin) that can be loaded by secpolpush.
+# ==============================================================================
+
+# Collect all security policy fragments from individual components
+filegroup(
+    name = "secpol_files",
+    srcs = [
+        "//module_common/apps/receiver:receiver_secpol",
+        "//module_common/apps/sender_a:sender_a_secpol",
+        "//module_common/apps/sender_b:sender_b_secpol",
+    ],
+)
+
+# Compile the combined security policy from all fragments
+secpolcompile(
+    name = "ipc_policy_compile",
+    srcs = [":secpol_files"],
+    output_name = "secpol.bin",
+    visibility = ["//module_4:__pkg__"],
+)
+
+# Main target that other rules depend on
+# Points to the compiled security policy binary
 filegroup(
     name = "ipc_policy",
-    srcs = ["secpol.bin"],
+    srcs = [":ipc_policy_compile"],
     visibility = ["//module_4:__pkg__"],
 )

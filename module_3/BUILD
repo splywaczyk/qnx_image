@@ -6,17 +6,17 @@ package(default_visibility = ["//visibility:public"])
 qnx_ifs(
     name = "ipc_ifs",
     srcs = [
-        "//module_common/apps/sender_receiver:receiver",
-        "//module_common/apps/sender_receiver:sender1",
-        "//module_common/apps/sender_receiver:sender2",
+        "//module_common/apps/receiver:receiver",
+        "//module_common/apps/sender_a:sender_a",
+        "//module_common/apps/sender_b:sender_b",
         "//module_common/buildfiles:tools_build"
     ],
     out = "ipc.ifs",
     build_file = "//module_3/buildfiles:ipc_build",
     ext_repo_maping = {
-        "RECEIVER_PATH": "$(location //module_common/apps/sender_receiver:receiver)",
-        "SENDER1_PATH": "$(location //module_common/apps/sender_receiver:sender1)",
-        "SENDER2_PATH": "$(location //module_common/apps/sender_receiver:sender2)",
+        "RECEIVER_PATH": "$(location //module_common/apps/receiver:receiver)",
+        "SENDER1_PATH": "$(location //module_common/apps/sender_a:sender_a)",
+        "SENDER2_PATH": "$(location //module_common/apps/sender_b:sender_b)",
     },
 )
 

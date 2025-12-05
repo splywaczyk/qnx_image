@@ -1,0 +1,79 @@
+# ==============================================================================
+# QNX Security Policy Fragment: Sender B Component (Unauthorized)
+# ==============================================================================
+# This file contains security policy definitions for sender_b process.
+# It defines the sender_b_secure_t type but does NOT grant it permission to
+# connect to the receiver's IPC channel.
+#
+# This is the UNAUTHORIZED sender that demonstrates security policy enforcement
+# by being blocked from connecting to the receiver.
+#
+# This fragment is meant to be combined with receiver and sender_a policy
+# fragments to create a complete security policy.
+#
+# Usage:
+#   secpolcompile -o secpol.bin receiver.secpol sender_a.secpol sender_b.secpol
+# ==============================================================================
+
+# ------------------------------------------------------------------------------
+# TYPE DEFINITION: SENDER B (UNAUTHORIZED)
+# ------------------------------------------------------------------------------
+
+type sender_b_secure_t;
+# Type: sender_b_secure_t
+# Purpose: Security type for UNAUTHORIZED IPC sender (demonstration)
+# Assigned to: sender_b application (via: on -T sender_b_secure_t)
+# Resources attempted:
+#   - Attempts to connect to receiver_secure_t's IPC channel
+# Permissions:
+#   - NO explicit allow rule for channel connection (implicitly denied)
+# Expected behavior: Connection fails, demonstrates policy enforcement
+
+# ------------------------------------------------------------------------------
+# IMPLICIT DENY FOR SENDER B
+# ------------------------------------------------------------------------------
+# NOTE: There is NO "allow sender_b_secure_t receiver_secure_t:channel connect;"
+# rule in this file. This is intentional.
+#
+# This demonstrates the default deny-all security model:
+#   - sender_b_secure_t has NO connection rule
+#   - Therefore it is DENIED by default
+#   - Any operation not explicitly allowed is automatically denied
+#
+# What sender_b attempts:
+#   coid = name_open("qnx_receiver_secure", 0);
+#
+# Policy check:
+#   1. sender_b has type: sender_b_secure_t
+#   2. Receiver channel has type: receiver_secure_t
+#   3. Operation: connect to channel
+#   4. Policy lookup: sender_b_secure_t ’ receiver_secure_t:channel connect
+#   5. No matching rule found
+#   6. Default policy: DENY
+#   7. name_open() fails
+#
+# Error returned: ENOENT (2) "No such process"
+#   - From sender_b's perspective, channel doesn't exist
+#   - This is by design - security through obscurity
+#   - Prevents information leakage about denied resources
+#
+# Demonstrates: Unauthorized access blocked by policy
+
+# ------------------------------------------------------------------------------
+# ABILITY GRANT: SENDER B
+# ------------------------------------------------------------------------------
+
+allow sender_b_secure_t self:ability {
+    able_create
+};
+# Grant: Dynamic ability creation for sender_b
+# Who: sender_b_secure_t processes
+# What: able_create ability (create new abilities at runtime)
+# Target: self (process itself)
+# Purpose: Allows runtime capability management
+#
+# Note: sender_b HAS this ability but LACKS channel connection permission
+# Demonstrates: Abilities and access rules are independent
+# Purpose: Proves denial is due to missing connection rule, not abilities
+
+# ==============================================================================

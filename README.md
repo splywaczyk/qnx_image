@@ -220,10 +220,12 @@ bazel run //module_3:run_qemu
   - **DENIED** by security policy
   - Connection attempts fail
   - Demonstrates policy enforcement
-- `module_4/secpol/ipc_policy.sp` - Security policy definition (QNX policy language)
-  - Defines three security types
-  - Allows sender1_secure_t → receiver_secure_t channel connections
-  - Implicitly denies sender2_secure_t (default deny-all)
+- **Modular Security Policy** - Split into per-component fragments:
+  - `module_common/apps/receiver/receiver.secpol` - Defines receiver_secure_t type
+  - `module_common/apps/sender_a/sender_a.secpol` - Defines sender_a_secure_t, ALLOW rule
+  - `module_common/apps/sender_b/sender_b.secpol` - Defines sender_b_secure_t, no ALLOW rule
+  - `module_4/secpol/BUILD` - Compiles fragments into secpol.bin
+  - Benefits: Co-located with code, easy to maintain, scalable
 
 **What You'll See:**
 - Security policy enforcement enabled via `secpolpush`

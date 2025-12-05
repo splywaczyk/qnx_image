@@ -11,7 +11,7 @@
 # SPDX-License-Identifier: Apache-2.0
 # *******************************************************************************
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
-load("//toolchains:rules.bzl", "ifs_toolchain", "qcc_toolchain")
+load("//toolchains:rules.bzl", "ifs_toolchain", "qcc_toolchain", "secpol_toolchain")
 
 def _impl(mctx):
     for mod in mctx.modules:
@@ -39,6 +39,11 @@ def _impl(mctx):
 
             ifs_toolchain(
                 name = "%s_ifs" % name,
+                sdp_repo = "%s_sdp" % name,
+            )
+
+            secpol_toolchain(
+                name = "%s_secpol" % name,
                 sdp_repo = "%s_sdp" % name,
             )
 

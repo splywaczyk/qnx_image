@@ -1,0 +1,67 @@
+# ==============================================================================
+# QNX Security Policy Fragment: Sender A Component (Authorized)
+# ==============================================================================
+# This file contains security policy definitions for sender_a process.
+# It defines the sender_a_secure_t type and grants it permission to connect
+# to the receiver's IPC channel.
+#
+# This is the AUTHORIZED sender that demonstrates successful IPC with security
+# policy enforcement.
+#
+# This fragment is meant to be combined with receiver and sender_b policy
+# fragments to create a complete security policy.
+#
+# Usage:
+#   secpolcompile -o secpol.bin receiver.secpol sender_a.secpol sender_b.secpol
+# ==============================================================================
+
+# ------------------------------------------------------------------------------
+# TYPE DEFINITION: SENDER A (AUTHORIZED)
+# ------------------------------------------------------------------------------
+
+type sender_a_secure_t;
+# Type: sender_a_secure_t
+# Purpose: Security type for authorized IPC sender
+# Assigned to: sender_a application (via: on -T sender_a_secure_t)
+# Resources accessed:
+#   - Connects to receiver_secure_t's IPC channel
+# Permissions:
+#   - Explicitly allowed to connect to receiver (see allow rule below)
+# Expected behavior: Successfully connects and sends messages
+
+# ------------------------------------------------------------------------------
+# CHANNEL CONNECTION RULE: SENDER A ’ RECEIVER
+# ------------------------------------------------------------------------------
+
+allow sender_a_secure_t receiver_secure_t:channel connect;
+# Rule: Allow sender_a to connect to receiver's channel
+# Who: sender_a_secure_t processes (authorized sender)
+# What: Connect to IPC channels owned by receiver_secure_t processes
+# Access class: :channel (IPC message channel)
+# Operation: connect (establish connection, get connection ID)
+# API sequence:
+#   1. sender_a: coid = name_open("qnx_receiver_secure", 0)
+#   2. Kernel: Check policy - sender_a_secure_t ’ receiver_secure_t:channel connect
+#   3. Policy: ALLOW (this rule exists)
+#   4. Kernel: Returns valid connection ID (coid)
+#   5. sender_a: MsgSend(coid, ...) - successfully sends messages
+# Effect:
+#   - name_open() succeeds, returns valid connection ID
+#   - sender_a can send messages via MsgSend()
+#   - sender_a can receive replies via MsgReply()
+# Demonstrates: Authorized access - explicit whitelist entry
+
+# ------------------------------------------------------------------------------
+# ABILITY GRANT: SENDER A
+# ------------------------------------------------------------------------------
+
+allow sender_a_secure_t self:ability {
+    able_create
+};
+# Grant: Dynamic ability creation for sender_a
+# Who: sender_a_secure_t processes
+# What: able_create ability (create new abilities at runtime)
+# Target: self (process itself)
+# Purpose: Allows runtime capability management
+
+# ==============================================================================

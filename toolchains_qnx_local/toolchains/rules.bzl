@@ -56,3 +56,22 @@ ifs_toolchain = repository_rule(
         ),
     },
 )
+
+def _secpol_toolchain_impl(rctx):
+    rctx.template(
+        "BUILD",
+        rctx.attr._secpol_tolchain_build,
+        {
+            "%{toolchain_sdp}": rctx.attr.sdp_repo,
+        },
+    )
+
+secpol_toolchain = repository_rule(
+    implementation = _secpol_toolchain_impl,
+    attrs = {
+        "sdp_repo": attr.string(),
+        "_secpol_tolchain_build": attr.label(
+            default = "//toolchains/secpol:secpol.BUILD",
+        ),
+    },
+)
