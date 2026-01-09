@@ -1,0 +1,26 @@
+#!/bin/bash
+# 01_basic_image/run_qemu.sh - Run Module 1 QNX Image
+
+set -e
+
+IFS_IMAGE=$1
+
+if [ ! -f "$IFS_IMAGE" ]; then
+    echo "Error: Image not found: $IFS_IMAGE"
+    echo "Run ./build_image.sh first"
+    exit 1
+fi
+
+echo "Starting QNX Module 1: Hello World..."
+echo "Press Ctrl+C"
+echo ""
+
+qemu-system-x86_64 \
+    -kernel "$IFS_IMAGE" \
+    -cpu max \
+    -m 512M \
+    -smp 2 \
+    -serial mon:stdio \
+    -display none \
+    -no-reboot \
+    -nographic

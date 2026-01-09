@@ -6,9 +6,9 @@ This directory contains a complete hands-on QNX training organized into 4 progre
 
 ```
 qnx_workspace/
-├── module_1/          # Hello World - Your First QNX Application
-├── module_2/          # Extended System with Bash and Tools
-├── module_3/          # IPC Communication (Message Passing)
+├── 01_basic_image/          # Hello World - Your First QNX Application
+├── 02_hello_world/          # Extended System with Bash and Tools
+├── 03_ipc/          # IPC Communication (Message Passing)
 ├── module_4/          # Security Policies and Access Control
 ├── bazel/             # Shared Bazel toolchain configuration
 ├── config/            # Shared platform and configuration
@@ -35,13 +35,13 @@ qnx_workspace/
 
 ```bash
 # Module 1: Hello World
-./module_1/run_qemu.sh
+./01_basic_image/run_qemu.sh
 
 # Module 2: Extended System with Utilities
-./module_2/run_qemu.sh
+./02_hello_world/run_qemu.sh
 
 # Module 3: IPC Communication
-./module_3/run_qemu.sh
+./03_ipc/run_qemu.sh
 
 # Module 4: Security Policies
 ./module_4/run_qemu.sh
@@ -64,13 +64,13 @@ qnx_workspace/
 
 **Files:**
 - `src/hello_world.cpp` - Simple C++ application
-- `buildfiles/minimal.build` - Minimal IFS configuration
+- `image_buildfiles/minimal.build` - Minimal IFS configuration
 - `build_image.sh` - Build script
 - `run_qemu.sh` - QEMU launcher
 
 **Build & Run:**
 ```bash
-cd module_1
+cd 01_basic_image
 ./build_image.sh
 ./run_qemu.sh
 ```
@@ -106,7 +106,7 @@ Built with Bazel and running successfully.
 
 **Build & Run:**
 ```bash
-cd module_2
+cd 02_hello_world
 ./build_image.sh
 ./run_qemu.sh
 ```
@@ -152,7 +152,7 @@ ls -la /proc/boot/
 
 **Build & Run:**
 ```bash
-cd module_3
+cd 03_ipc
 ./build_image.sh
 ./run_qemu.sh
 ```
@@ -188,9 +188,9 @@ cd module_3
 ```
 
 **Components:**
-- `module_common/apps/receiver/` - Secure receiver with policy fragment
-- `module_common/apps/sender_a/` - Authorized sender (ALLOWED) with policy
-- `module_common/apps/sender_b/` - Unauthorized sender (DENIED) with policy
+- `00_common/apps/receiver/` - Secure receiver with policy fragment
+- `00_common/apps/sender_a/` - Authorized sender (ALLOWED) with policy
+- `00_common/apps/sender_b/` - Unauthorized sender (DENIED) with policy
 - `secpol/BUILD` - Compiles modular security policy fragments
 
 **Build & Run:**
@@ -268,8 +268,8 @@ config/
 
 ```bash
 # Build just the applications
-bazel build //module_1/src:hello_world --platforms=//bazel/platforms:qnx_x86_64
-bazel build //module_common/apps/receiver:receiver //module_common/apps/sender_a:sender_a //module_common/apps/sender_b:sender_b --platforms=//bazel/platforms:qnx_x86_64
+bazel build //01_basic_image/src:hello_world --platforms=//bazel/platforms:qnx_x86_64
+bazel build //00_common/apps/receiver:receiver //00_common/apps/sender_a:sender_a //00_common/apps/sender_b:sender_b --platforms=//bazel/platforms:qnx_x86_64
 ```
 
 ### Create IFS Image Only
@@ -280,7 +280,7 @@ export WORKSPACE_ROOT=$(pwd)
 export QNX_TARGET=/home/qnx/qnx800/target/qnx
 
 # Build IFS
-mkifs -vvv module_1/buildfiles/qnx_minimal.build module_1/images/qnx_minimal.ifs
+mkifs -vvv 01_basic_image/image_buildfiles/qnx_minimal.build 01_basic_image/images/qnx_minimal.ifs
 ```
 
 ## Troubleshooting

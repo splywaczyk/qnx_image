@@ -1,0 +1,340 @@
+# ==============================================================================
+# QNX Common Tools and Utilities Build Configuration
+# ==============================================================================
+# This file provides a comprehensive set of utilities and libraries that can be
+# included in any QNX IFS image. It's designed to be reusable across all modules.
+#
+# Usage in other .build files:
+#   [+include] 00_common/image_buildfiles/tools.build
+#
+# Variables used:
+#   ${QNX_TARGET} - Path to QNX SDP target directory (set by mkifs)
+# ==============================================================================
+
+# ------------------------------------------------------------------------------
+# SYMBOLIC LINKS - Virtual Filesystem Structure
+# ------------------------------------------------------------------------------
+# These create virtual filesystem entries that redirect to actual locations
+# Format: [type=link] <destination>=<source>
+
+[type=link] /tmp=/dev/shmem
+# Purpose: Map /tmp to shared memory device for temporary files
+# Benefit: Fast in-memory temporary storage
+# Note: Contents are volatile (lost on reboot)
+
+[type=link] /var/log=/tmp
+# Purpose: System log directory maps to /tmp (shared memory)
+# Benefit: Prevents filling up persistent storage
+# Note: Logs are lost on reboot in this configuration
+
+[type=link] /dev/console=/dev/ser1
+# Purpose: Console output goes to first serial port
+# Benefit: Allows serial console access for headless systems
+# Serial: ser1 = COM1/ttyS0 equivalent
+
+[type=link] /bin/sh=/proc/boot/ksh
+# Purpose: Standard shell symlink to Korn Shell
+# Benefit: Shell scripts using #!/bin/sh will use ksh
+# Note: Korn Shell (ksh) provides POSIX compatibility
+
+# ------------------------------------------------------------------------------
+# DYNAMIC LINKER
+# ------------------------------------------------------------------------------
+# The dynamic linker (ld) is required for loading shared libraries at runtime
+
+[type=link] /usr/lib/ldqnx-64.so.2=/proc/boot/ldqnx-64.so.2
+# Purpose: Symlink for library search path compatibility
+# Location: /usr/lib is standard search path, /proc/boot is IFS root
+
+ldqnx-64.so.2 = ${QNX_TARGET}/x86_64/usr/lib/ldqnx-64.so.2
+# File: Dynamic linker for x86_64 QNX binaries
+# Source: QNX SDP target directory
+# Version: .2 indicates ABI version 2
+
+# ------------------------------------------------------------------------------
+# ESSENTIAL SHARED LIBRARIES
+# ------------------------------------------------------------------------------
+# These are the core libraries required by most C/C++ applications
+# Note: startup-x86 and procnto-smp-instr are auto-discovered from boot section
+
+libc.so = ${QNX_TARGET}/x86_64/lib/libc.so
+# Library: Standard C library (glibc equivalent)
+# Provides: printf, malloc, file I/O, POSIX functions
+# Required: By virtually all C/C++ programs
+# Size: ~1.5 MB
+# Location: /lib (standard library directory)
+
+libc++.so.2 = ${QNX_TARGET}/x86_64/usr/lib/libc++.so.2
+# Library: C++ Standard Library (STL)
+# Provides: std::string, std::vector, iostream, etc.
+# Required: By C++ programs using STL
+# Standard: C++14 support
+# Size: ~1.8 MB
+
+libm.so.3 = ${QNX_TARGET}/x86_64/lib/libm.so.3
+# Library: Math library
+# Provides: sin, cos, sqrt, pow, exp, log, etc.
+# Required: By programs using <cmath> or <math.h>
+# Standard: IEEE 754 floating-point
+
+libgcc_s.so.1 = ${QNX_TARGET}/x86_64/lib/libgcc_s.so.1
+# Library: GCC runtime support
+# Provides: Exception handling, stack unwinding
+# Required: By C++ programs with exceptions
+# Note: Even with -fno-exceptions, some GCC internals need this
+
+libsocket.so = ${QNX_TARGET}/x86_64/lib/libsocket.so
+# Library: Network socket functions
+# Provides: socket, bind, connect, send, recv
+# Required: By programs using TCP/IP networking
+# Protocols: TCP, UDP, Unix domain sockets
+
+# ------------------------------------------------------------------------------
+# SYSTEM SERVICES AND DAEMONS
+# ------------------------------------------------------------------------------
+# These are QNX system services that provide core functionality
+
+slogger2 = ${QNX_TARGET}/x86_64/bin/slogger2
+# Service: System logger daemon
+# Purpose: Collects and manages system log messages
+# Usage: Started with: slogger2 &
+# API: slog2f(), slog2c() for logging
+# Storage: /var/log/slog2 (or /tmp/slog2 if var/log->tmp)
+# View logs: slog2info command
+
+pci-server = ${QNX_TARGET}/x86_64/sbin/pci-server
+# Service: PCI bus enumeration and management
+# Purpose: Discovers and manages PCI devices
+# Usage: Started with: pci-server &
+# Required: By device drivers needing PCI access
+# Info: pci command shows PCI devices
+
+random = ${QNX_TARGET}/x86_64/usr/sbin/random
+# Service: Random number generator daemon
+# Purpose: Provides /dev/random and /dev/urandom
+# Usage: Started with: random -t & (-t = uses timer entropy)
+# Quality: PRNG suitable for most purposes
+# Note: Not cryptographically secure without hardware RNG
+
+devc-pty = ${QNX_TARGET}/x86_64/sbin/devc-pty
+# Service: Pseudo-TTY (PTY) device manager
+# Purpose: Creates /dev/pty* and /dev/ttyp* devices
+# Required: By terminal emulators, screen, tmux
+# Usage: devc-pty &
+
+waitfor = ${QNX_TARGET}/x86_64/bin/waitfor
+# Utility: Wait for path to exist
+# Purpose: Synchronization in startup scripts
+# Usage: waitfor /dev/random 5  (wait 5 seconds)
+# Common: Used to wait for drivers to initialize
+
+# ------------------------------------------------------------------------------
+# TOYBOX - Unix Utilities
+# ------------------------------------------------------------------------------
+# Toybox is a single binary providing many standard Unix commands
+# Website: http://landley.net/toybox/
+# Advantage: Small size (~400KB for dozens of utilities)
+
+toybox = ${QNX_TARGET}/x86_64/usr/bin/toybox
+# Binary: Multi-call binary (like BusyBox)
+# Commands: 80+ Unix utilities in one executable
+# Usage: Commands are symlinked to toybox
+# Memory: Shared code reduces memory footprint
+
+# File System Utilities
+[type=link] ls=toybox          # List directory contents (ls -la, ls -lh)
+[type=link] cat=toybox         # Concatenate and display files
+[type=link] cp=toybox          # Copy files and directories (cp -r)
+[type=link] mv=toybox          # Move/rename files
+[type=link] rm=toybox          # Remove files (rm -rf)
+[type=link] mkdir=toybox       # Create directories (mkdir -p)
+[type=link] chmod=toybox       # Change file permissions
+[type=link] touch=toybox       # Create empty files or update timestamps
+[type=link] ln=toybox          # Create links (ln -s for symlinks)
+
+# Text Processing Utilities
+[type=link] grep=toybox        # Search text with patterns (grep -r, grep -i)
+[type=link] sed=toybox         # Stream editor for text transformation
+[type=link] head=toybox        # Display first N lines of file
+[type=link] tail=toybox        # Display last N lines (tail -f for follow)
+[type=link] awk=toybox         # Text processing language (Note: limited vs GNU awk)
+
+# System Information
+[type=link] ps=toybox          # Process status (ps aux)
+[type=link] uname=toybox       # System information (uname -a)
+[type=link] date=toybox        # Display/set date and time
+[type=link] hostname=toybox    # Show/set system hostname
+[type=link] env=toybox         # Display environment variables
+[type=link] uptime=toybox      # System uptime and load average
+
+# Utility Commands
+[type=link] sleep=toybox       # Sleep for N seconds
+[type=link] display_msg=toybox # Display messages (echo equivalent)
+
+# ------------------------------------------------------------------------------
+# QNX-SPECIFIC UTILITIES
+# ------------------------------------------------------------------------------
+# These are native QNX utilities not provided by toybox
+
+pidin = ${QNX_TARGET}/x86_64/bin/pidin
+# Utility: Process information display (QNX-specific)
+# Purpose: Detailed process information beyond ps
+# Usage:
+#   pidin                   # List all processes
+#   pidin info              # System information
+#   pidin mem               # Memory usage by process
+#   pidin -p PID            # Info for specific PID
+#   pidin arguments         # Show command-line arguments
+#   pidin family            # Process family tree
+# Features: Real-time info, threads, memory maps
+
+slay = ${QNX_TARGET}/x86_64/bin/slay
+# Utility: Kill processes by name or PID
+# Purpose: Terminate processes
+# Usage:
+#   slay process_name       # Kill by name (SIGTERM)
+#   slay -9 PID            # Force kill (SIGKILL)
+#   slay -s SIGNAL name    # Send specific signal
+# Advantage: Can kill by name without knowing PID
+
+ksh = ${QNX_TARGET}/x86_64/bin/ksh
+# Shell: Korn Shell (KornShell)
+# Purpose: Interactive shell and script interpreter
+# Features:
+#   - Command-line editing (Emacs/Vi modes)
+#   - Command history
+#   - Job control (fg, bg, &)
+#   - Aliases and functions
+#   - POSIX compatibility
+#   - Shell scripting (loops, conditionals)
+# Usage: [+session] ksh & (in startup script)
+
+# ------------------------------------------------------------------------------
+# ADDITIONAL UNIX UTILITIES
+# ------------------------------------------------------------------------------
+# Full-featured versions from QNX (not toybox)
+
+less = ${QNX_TARGET}/x86_64/usr/bin/less
+# Utility: File pager (like more, but better)
+# Purpose: View files page-by-page with scrolling
+# Features: Forward/backward navigation, search, line numbers
+# Usage: less /var/log/messages
+# Keys: Space=next page, b=prev page, /=search, q=quit
+
+nice = ${QNX_TARGET}/x86_64/usr/bin/nice
+# Utility: Run program with modified scheduling priority
+# Purpose: Lower/raise process priority
+# Usage: nice -n 10 long_running_task
+# Range: -20 (highest) to +19 (lowest)
+# Default: nice without args adds +10
+
+renice = ${QNX_TARGET}/x86_64/usr/bin/renice
+# Utility: Change priority of running process
+# Purpose: Adjust priority after process has started
+# Usage:
+#   renice -n 5 -p PID     # Set priority to 5
+#   renice +10 -p PID      # Increase niceness by 10
+
+umount = ${QNX_TARGET}/x86_64/bin/umount
+# Utility: Unmount filesystems
+# Purpose: Detach mounted filesystems
+# Usage:
+#   umount /mnt/point      # Unmount by mount point
+#   umount -f /mnt         # Force unmount
+
+clear = ${QNX_TARGET}/x86_64/usr/bin/clear
+# Utility: Clear terminal screen
+# Purpose: Clear display and reset cursor
+# Usage: clear
+# Note: Uses terminfo to send control sequences
+
+# ------------------------------------------------------------------------------
+# SHARED LIBRARIES (Additional)
+# ------------------------------------------------------------------------------
+# These libraries support specific functionality and are auto-discovered when
+# needed by applications in the IFS. Just list the name without full path.
+
+libfsnotify.so.1
+# Library: Filesystem notification
+# Purpose: Monitor file system changes (inotify-like)
+# API: fsnotify_*() functions
+# Use case: File monitoring daemons
+
+libslog2.so.1
+# Library: System logging version 2
+# Purpose: Client library for slogger2
+# API: slog2f(), slog2c() functions
+# Required: By programs that log to slogger2
+
+libpci.so.3.0
+# Library: PCI bus access library
+# Purpose: User-space PCI device access
+# API: pci_*() functions
+# Required: By programs accessing PCI devices
+
+libqcrypto.so.1.0
+# Library: QNX cryptography library
+# Purpose: Cryptographic functions
+# API: Encryption, hashing, RNG
+# Standards: OpenSSL-compatible API
+
+libsecpol.so.1
+# Library: Security policy enforcement
+# Purpose: Support for QNX security policies
+# API: secpol_*() functions
+# Required: By security policy-aware applications
+# Used by: Module 4 (Security Policies)
+
+libqh.so.1
+# Library: QNX helper library
+# Purpose: Common QNX utility functions
+# API: Various QNX-specific helpers
+
+libz.so.2
+# Library: zlib compression library
+# Purpose: Data compression/decompression
+# API: compress(), uncompress(), gzip functions
+# Standard: RFC 1950, 1951, 1952
+
+libncursesw.so.1
+# Library: New Curses library (wide character support)
+# Purpose: Terminal UI library for text-based interfaces
+# API: Terminal control, window management
+# Features: Colors, forms, menus
+# Required: By text UI applications
+
+libregex.so.1
+# Library: Regular expression library
+# Purpose: POSIX regex matching
+# API: regcomp(), regexec(), regfree()
+# Used by: grep, sed, and other text processors
+
+# ==============================================================================
+# USAGE NOTES
+# ==============================================================================
+#
+# Including this file in your .build:
+#   [+include] 00_common/image_buildfiles/tools.build
+#
+# Customizing:
+#   - Comment out unused utilities to reduce image size
+#   - Add custom utilities by following the same pattern
+#   - Ensure all dependencies (libraries) are included
+#
+# Size considerations:
+#   - Base libraries (libc, libc++): ~3.5 MB
+#   - Toybox: ~400 KB (replaces many separate binaries)
+#   - Each QNX utility: 20-200 KB
+#   - Total for all: ~6-8 MB
+#
+# Order of operations (handled by mkifs):
+#   1. Linker loaded first (ldqnx-64.so.2)
+#   2. Libraries loaded as needed
+#   3. Utilities available after filesystem initialization
+#
+# Security considerations:
+#   - All binaries run with IFS permissions (typically root)
+#   - Consider using security policies (Module 4) to restrict access
+#   - Remove unused utilities to reduce attack surface
+#
+# ==============================================================================

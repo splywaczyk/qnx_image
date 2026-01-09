@@ -9,31 +9,46 @@ This repository contains a complete QNX training organized into 4 progressive mo
 
 ```
 qnx/
-├── module_1/                    # Hello World - Your First QNX Application
+├── 01_basic_image/                    # Hello World - Your First QNX Application
 │   ├── BUILD                    # Bazel build configuration
-│   ├── buildfiles/              # IFS build configuration
-│   └── run_qemu.sh              # QEMU launcher script
-├── module_2/                    # Extended System with Shell and Tools
+│   ├── image_buildfiles/              # IFS build configuration
+│   └── scripts/                 # Scripts (run_qemu.sh)
+├── 02_hello_world/                    # Extended System with Shell and Tools
 │   ├── BUILD                    # Bazel build configuration
-│   ├── buildfiles/              # IFS build configuration
-│   └── run_qemu.sh              # QEMU launcher script
-├── module_3/                    # IPC Communication (Message Passing)
+│   ├── image_buildfiles/              # IFS build configuration
+│   └── scripts/                 # Scripts (run_qemu.sh)
+├── 03_ipc/                    # IPC Communication (Message Passing)
 │   ├── BUILD                    # Bazel build configuration
-│   ├── buildfiles/              # IFS build configuration
-│   ├── README.md                # Module-specific documentation
-│   └── run_qemu.sh              # QEMU launcher script
+│   ├── image_buildfiles/              # IFS build configuration
+│   ├── scripts/                 # Scripts (run_qemu.sh)
+│   └── README.md                # Module-specific documentation
 ├── module_4/                    # Security Policies and Access Control
 │   ├── BUILD                    # Bazel build configuration
-│   ├── buildfiles/              # IFS build configuration
-│   ├── secpol/                  # Security policy definitions
+│   ├── image_buildfiles/              # IFS build configuration
+│   ├── secpol/                  # Security policy compilation
+│   ├── scripts/                 # Scripts (run_qemu.sh)
 │   ├── README.md                # Module-specific documentation
-│   ├── QUICKSTART.md            # Quick start guide
-│   └── run_qemu.sh              # QEMU launcher script
-├── module_common/               # Shared applications and build files
+│   └── QUICKSTART.md            # Quick start guide
+├── 00_common/               # Shared applications and build files
 │   ├── apps/                    # Reusable C++ applications
 │   │   ├── hello_world/         # Simple hello world app
-│   │   └── sender_receiver/     # IPC demo apps (receiver, sender1, sender2)
-│   └── buildfiles/              # Common IFS build components
+│   │   │   ├── inc/             # Header files
+│   │   │   ├── src/             # Source files
+│   │   │   └── BUILD
+│   │   ├── receiver/            # IPC receiver (secure)
+│   │   │   ├── inc/             # Header files
+│   │   │   ├── src/             # Source files
+│   │   │   └── BUILD
+│   │   ├── sender_a/            # IPC sender A (authorized)
+│   │   │   ├── inc/             # Header files
+│   │   │   ├── src/             # Source files
+│   │   │   └── BUILD
+│   │   └── sender_b/            # IPC sender B (unauthorized)
+│   │       ├── inc/             # Header files
+│   │       ├── src/             # Source files
+│   │       └── BUILD
+│   ├── image_buildfiles/              # Common IFS build components
+│   └── secpol/                  # Security policy definitions (.secpol files)
 ├── toolchains_qnx/              # Bazel toolchain configuration
 │   ├── toolchains/              # QCC cross-compilation toolchain
 │   ├── rules/fs/                # IFS build rules
@@ -72,13 +87,13 @@ bazel run //module_N:run_qemu
 
 ```bash
 # Module 1: Hello World
-bazel run //module_1:run_qemu
+bazel run //01_basic_image:run_qemu
 
 # Module 2: Extended System
-bazel run //module_2:run_qemu
+bazel run //02_hello_world:run_qemu
 
 # Module 3: IPC Communication
-bazel run //module_3:run_qemu
+bazel run //03_ipc:run_qemu
 
 # Module 4: Security Policies
 bazel run //module_4:run_qemu
@@ -100,11 +115,11 @@ See [TRAINING.md](TRAINING.md) for complete step-by-step documentation.
 - Learn modern C++ organization with header/implementation separation
 
 **Key Components:**
-- `module_common/apps/hello_world/qnx_application.h` - Application class header
-- `module_common/apps/hello_world/qnx_application.cpp` - Implementation
-- `module_common/apps/hello_world/main.cpp` - Entry point
-- `module_1/buildfiles/qnx_minimal.build` - Minimal IFS configuration with procnto and ksh
-- `module_1/BUILD` - Bazel build rules for IFS generation
+- `00_common/apps/hello_world/inc/qnx_application.h` - Application class header
+- `00_common/apps/hello_world/src/qnx_application.cpp` - Implementation
+- `00_common/apps/hello_world/src/main.cpp` - Entry point
+- `01_basic_image/image_buildfiles/qnx_minimal.build` - Minimal IFS configuration with procnto and ksh
+- `01_basic_image/BUILD` - Bazel build rules for IFS generation
 
 **What You'll See:**
 - QNX kernel boot sequence
@@ -113,7 +128,7 @@ See [TRAINING.md](TRAINING.md) for complete step-by-step documentation.
 
 **Build & Run:**
 ```bash
-bazel run //module_1:run_qemu
+bazel run //01_basic_image:run_qemu
 ```
 
 ---
@@ -141,7 +156,7 @@ bazel run //module_1:run_qemu
 
 **Build & Run:**
 ```bash
-bazel run //module_2:run_qemu
+bazel run //02_hello_world:run_qemu
 ```
 
 ---
@@ -157,20 +172,20 @@ bazel run //module_2:run_qemu
 - Use C++17 features: smart pointers, RAII, optional, chrono
 
 **Components:**
-- `module_common/apps/receiver/` - Secure Message Receiver
-  - `secure_message_receiver.h` - Receiver class header with RAII
-  - `secure_message_receiver.cpp` - Implementation with unique_ptr
-  - `main.cpp` - Entry point
+- `00_common/apps/receiver/` - Secure Message Receiver
+  - `inc/secure_message_receiver.h` - Receiver class header with RAII
+  - `src/secure_message_receiver.cpp` - Implementation with unique_ptr
+  - `src/main.cpp` - Entry point
   - Creates named channel with automatic cleanup
   - Receives messages from multiple senders
   - Displays message type, subtype, and data
-- `module_common/apps/sender_a/` - Sender A (Authorized)
-  - `message_sender.h` - Sender class with connection management
-  - `message_sender.cpp` - Implementation with optional and chrono
-  - `main.cpp` - Entry point
+- `00_common/apps/sender_a/` - Sender A (Authorized)
+  - `inc/message_sender.h` - Sender class with connection management
+  - `src/message_sender.cpp` - Implementation with optional and chrono
+  - `src/main.cpp` - Entry point
   - Sends 10 messages (type=1, subtype=100)
   - 2-second intervals using std::chrono
-- `module_common/apps/sender_b/` - Sender B (Unauthorized)
+- `00_common/apps/sender_b/` - Sender B (Unauthorized)
   - Same structure as sender_a
   - Sends 7 messages (type=2, subtype=200)
   - 3-second intervals
@@ -185,7 +200,7 @@ bazel run //module_2:run_qemu
 
 **Build & Run:**
 ```bash
-bazel run //module_3:run_qemu
+bazel run //03_ipc:run_qemu
 ```
 
 **Key Concepts:**
@@ -210,24 +225,24 @@ bazel run //module_3:run_qemu
 - Enable security policy enforcement with `secpolpush`
 
 **Components:**
-- `module_common/apps/sender_receiver/receiver.cpp` - Secure receiver (type: receiver_secure_t)
+- `00_common/apps/receiver/` - Secure receiver (type: receiver_secure_t)
   - Creates secured channel with type enforcement
   - Only accepts connections from authorized senders
   - Logs security policy decisions
-- `module_common/apps/sender_receiver/sender1.cpp` - Authorized sender (type: sender1_secure_t)
+- `00_common/apps/sender_a/` - Authorized sender (type: sender1_secure_t)
   - **ALLOWED** to connect per security policy
   - Successfully sends all messages
   - Demonstrates authorized IPC
-- `module_common/apps/sender_receiver/sender2.cpp` - Unauthorized sender (type: sender2_secure_t)
+- `00_common/apps/sender_b/` - Unauthorized sender (type: sender2_secure_t)
   - **DENIED** by security policy
   - Connection attempts fail
   - Demonstrates policy enforcement
-- **Modular Security Policy** - Split into per-component fragments:
-  - `module_common/apps/receiver/receiver.secpol` - Defines receiver_secure_t type
-  - `module_common/apps/sender_a/sender_a.secpol` - Defines sender_a_secure_t, ALLOW rule
-  - `module_common/apps/sender_b/sender_b.secpol` - Defines sender_b_secure_t, no ALLOW rule
+- **Centralized Security Policy** - Organized in dedicated folder:
+  - `00_common/secpol/receiver.secpol` - Defines receiver_secure_t type
+  - `00_common/secpol/sender_a.secpol` - Defines sender_a_secure_t, ALLOW rule
+  - `00_common/secpol/sender_b.secpol` - Defines sender_b_secure_t, no ALLOW rule
   - `module_4/secpol/BUILD` - Compiles fragments into secpol.bin
-  - Benefits: Co-located with code, easy to maintain, scalable
+  - Benefits: Centralized management, clear separation of concerns
 
 **What You'll See:**
 - Security policy enforcement enabled via `secpolpush`
@@ -473,7 +488,7 @@ ls -la /home/qnx/qnx800/target/qnx
 ```bash
 # Clean Bazel cache and rebuild
 bazel clean --expunge
-bazel build //module_1:qnx_minimal_ifs
+bazel build //01_basic_image:qnx_minimal_ifs
 ```
 
 ### QEMU Issues
@@ -498,19 +513,19 @@ sudo dnf install qemu-system-x86
 # Ensure: -serial stdio -display none are set
 
 # Try with different CPU model
-qemu-system-x86_64 -kernel module_1/qnx_minimal.ifs \
+qemu-system-x86_64 -kernel 01_basic_image/qnx_minimal.ifs \
   -cpu max -m 2048 -serial stdio -display none -no-reboot
 ```
 
 #### QEMU Exits Immediately
 ```bash
 # Check IFS image integrity
-ls -lh module_1/qnx_minimal.ifs
+ls -lh 01_basic_image/qnx_minimal.ifs
 
 # Re-build the image
 bazel clean
-bazel build //module_1:qnx_minimal_ifs
-bazel run //module_1:run_qemu
+bazel build //01_basic_image:qnx_minimal_ifs
+bazel run //01_basic_image:run_qemu
 ```
 
 ### Runtime Issues
@@ -585,7 +600,7 @@ bazel run //module_1:run_qemu
 
 - **[TRAINING.md](TRAINING.md)** - Detailed step-by-step training guide with explanations
 - **Module READMEs:**
-  - [Module 3: IPC Communication](module_3/README.md)
+  - [Module 3: IPC Communication](03_ipc/README.md)
   - [Module 4: Security Policies](module_4/README.md)
 - **[toolchains_qnx/README.md](toolchains_qnx/README.md)** - Bazel toolchain documentation
 
@@ -655,9 +670,9 @@ This is a training repository. If you find issues or have improvements:
 
 | Module | Time | Key Topic | Command |
 |--------|------|-----------|---------|
-| 1 | 30m | Hello World | `bazel run //module_1:run_qemu` |
-| 2 | 45m | System Tools | `bazel run //module_2:run_qemu` |
-| 3 | 60m | IPC | `bazel run //module_3:run_qemu` |
+| 1 | 30m | Hello World | `bazel run //01_basic_image:run_qemu` |
+| 2 | 45m | System Tools | `bazel run //02_hello_world:run_qemu` |
+| 3 | 60m | IPC | `bazel run //03_ipc:run_qemu` |
 | 4 | 90m | Security | `bazel run //module_4:run_qemu` |
 
-**Next Steps:** Start with `bazel run //module_1:run_qemu` and follow the [TRAINING.md](TRAINING.md) guide!
+**Next Steps:** Start with `bazel run //01_basic_image:run_qemu` and follow the [TRAINING.md](TRAINING.md) guide!

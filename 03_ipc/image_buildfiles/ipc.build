@@ -1,0 +1,60 @@
+# image_buildfiles/ipc.build
+# QNX image with IPC applications
+
+[image=0x200000]
+
+[virtual=x86_64,multiboot] boot = {
+    # Use startup-x86 with 8250 serial for QEMU
+    startup-x86 -D 8250
+    PATH=/proc/boot:/bin:/usr/bin:/sbin:/usr/sbin
+    LD_LIBRARY_PATH=/proc/boot:/lib:/usr/lib:/lib/dll
+    procnto-smp-instr
+}
+
+[+script] startup-script = {
+    # System services
+    slogger2 &
+    pci-server &
+    random -t &
+
+    mkdir -p /tmp /var/log /etc
+    mount -T io-pkt /dev/shmem /tmp
+
+    sleep 1
+
+    display_msg ""
+    display_msg "============================================="
+    display_msg "  QNX IPC Demo System"
+    display_msg "============================================="
+    display_msg ""
+
+    # Start receiver in background
+    display_msg "Starting receiver..."
+    /proc/boot/receiver &
+
+    # Wait for receiver to initialize
+    sleep 2
+
+    # Start both senders
+    display_msg "Starting sender 1..."
+    /proc/boot/sender1 &
+
+    display_msg "Starting sender 2..."
+    /proc/boot/sender2 &
+
+    display_msg ""
+    display_msg "All IPC applications started!"
+    display_msg "Watch the message exchange below..."
+    display_msg "============================================="
+    display_msg ""
+
+    # Start sh as login shell on serial console
+    [+session] /bin/sh &
+}
+
+# Our IPC applications
+receiver=${RECEIVER_PATH}
+sender1=${SENDER1_PATH}
+sender2=${SENDER2_PATH}
+
+[+include] 00_common/image_buildfiles/tools.build
