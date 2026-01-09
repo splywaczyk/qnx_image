@@ -1,6 +1,6 @@
 # QNX Training Modules - Quick Start Guide
 
-This directory contains a complete hands-on QNX training organized into 5 progressive modules. Each module is self-contained with its own source code, build files, and images.
+This directory contains a complete hands-on QNX training organized into 4 progressive modules. Each module is self-contained with its own source code, build files, and images.
 
 ## Training Structure
 
@@ -10,7 +10,6 @@ qnx_workspace/
 ├── module_2/          # Extended System with Bash and Tools
 ├── module_3/          # IPC Communication (Message Passing)
 ├── module_4/          # Security Policies and Access Control
-├── module_5/          # Secure Boot Implementation
 ├── bazel/             # Shared Bazel toolchain configuration
 ├── config/            # Shared platform and configuration
 └── qnx_sdp/           # QNX SDP repository setup
@@ -46,12 +45,6 @@ qnx_workspace/
 
 # Module 4: Security Policies
 ./module_4/run_qemu.sh
-
-# Module 5: Secure Boot
-# First, generate keys and sign the image:
-./module_5/tools/generate_keys.sh
-./module_5/build_and_sign.sh
-./module_5/run_qemu.sh
 ```
 
 ### Clean All Build Artifacts
@@ -221,67 +214,6 @@ cat module_4/QUICKSTART.md
 
 ---
 
-### Module 5: Secure Boot Implementation
-
-**Learning Objectives:**
-- Generate RSA-4096 key pairs
-- Sign QNX images with cryptographic signatures
-- Verify image integrity
-- Detect tampering
-
-**Secure Boot Workflow:**
-```
-1. Build Application
-   ↓
-2. Create Unsigned IFS Image
-   ↓
-3. Generate SHA-256 Hash
-   ↓
-4. Sign with RSA-4096 Private Key
-   ↓
-5. Append Signature to Image
-   ↓
-6. Verify with Public Key
-   ↓
-7. Boot Signed Image
-```
-
-**Components:**
-- `src/verify_boot.cpp` - Boot verification status display
-- `tools/generate_keys.sh` - Generate RSA key pair
-- `tools/sign_image.sh` - Sign images with OpenSSL
-- `tools/verify_image.sh` - Verify signatures
-
-**Build & Run:**
-```bash
-cd module_5
-
-# Generate keys (first time only)
-./tools/generate_keys.sh
-
-# Build, sign, and verify
-./build_and_sign.sh
-
-# Run signed image
-./run_qemu.sh
-```
-
-**Tamper Detection Test:**
-```bash
-# Tamper with signed image
-echo "tampered" >> images/qnx_signed.ifs
-
-# Verification will FAIL
-./tools/verify_image.sh images/qnx_signed.ifs
-```
-
-**See Full Documentation:**
-```bash
-cat module_5/README.md
-```
-
----
-
 ## Architecture Overview
 
 ### Bazel Build System
@@ -381,7 +313,6 @@ ls -la ~/.qnx/license/
 
 Each module has its own README with detailed troubleshooting:
 - `module_4/README.md` - Security policy troubleshooting
-- `module_5/README.md` - Secure boot and signing issues
 
 ## Environment Setup
 
@@ -418,24 +349,22 @@ source ~/qnx_env.sh
 2. **Module 2** - Explore QNX system utilities and bash
 3. **Module 3** - Learn QNX-specific IPC mechanisms
 4. **Module 4** - Understand security policies (critical for production)
-5. **Module 5** - Implement secure boot (critical for production)
 
 **Time Estimate:**
 - Module 1: 30 minutes
 - Module 2: 30 minutes
 - Module 3: 1 hour
 - Module 4: 1.5 hours
-- Module 5: 1 hour
 
-**Total:** ~4.5 hours for complete training
+**Total:** ~3.5 hours for complete training
 
 ## Next Steps
 
 After completing all modules, consider:
 
-1. **Combine Security Features:**
-   - Create an image with both security policies AND secure boot
+1. **Extend Security Features:**
    - Add additional sender/receiver pairs with different policies
+   - Implement more complex security policy scenarios
 
 2. **Advanced Security:**
    - Implement process abilities

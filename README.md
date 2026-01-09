@@ -1,7 +1,7 @@
 # QNX Training: From Beginner to Advanced Security
 ## Complete Hands-on Guide (C++ Edition with Bazel)
 
-This repository contains a complete QNX training organized into 5 progressive modules. Each module is self-contained with its own source code, Bazel BUILD files, and bootable IFS (Image Filesystem) images.
+This repository contains a complete QNX training organized into 4 progressive modules. Each module is self-contained with its own source code, Bazel BUILD files, and bootable IFS (Image Filesystem) images.
 
 ---
 
@@ -29,17 +29,10 @@ qnx/
 │   ├── README.md                # Module-specific documentation
 │   ├── QUICKSTART.md            # Quick start guide
 │   └── run_qemu.sh              # QEMU launcher script
-├── module_5/                    # Secure Boot Implementation
-│   ├── BUILD                    # Bazel build configuration
-│   ├── buildfiles/              # IFS build configuration
-│   ├── tools/                   # Key generation and signing tools
-│   ├── README.md                # Module-specific documentation
-│   └── run_qemu.sh              # QEMU launcher script
 ├── module_common/               # Shared applications and build files
 │   ├── apps/                    # Reusable C++ applications
 │   │   ├── hello_world/         # Simple hello world app
-│   │   ├── sender_receiver/     # IPC demo apps (receiver, sender1, sender2)
-│   │   └── verify_boot/         # Boot verification app
+│   │   └── sender_receiver/     # IPC demo apps (receiver, sender1, sender2)
 │   └── buildfiles/              # Common IFS build components
 ├── toolchains_qnx/              # Bazel toolchain configuration
 │   ├── toolchains/              # QCC cross-compilation toolchain
@@ -89,9 +82,6 @@ bazel run //module_3:run_qemu
 
 # Module 4: Security Policies
 bazel run //module_4:run_qemu
-
-# Module 5: Secure Boot
-bazel run //module_5:run_qemu
 ```
 
 See [TRAINING.md](TRAINING.md) for complete step-by-step documentation.
@@ -257,81 +247,6 @@ type sender2_secure_t;
 allow_attach receiver_secure_t /dev/name/local/qnx_receiver_secure;
 allow sender1_secure_t receiver_secure_t:channel connect;
 # sender2 implicitly denied
-```
-
----
-
-### Module 5: Secure Boot 🔐
-**Duration:** 60 minutes
-**Learning Objectives:**
-- Generate RSA-4096 key pairs for image signing
-- Sign QNX IFS images with cryptographic signatures
-- Verify image integrity before boot
-- Detect and reject tampered images
-- Implement chain of trust concepts
-
-**Components:**
-- `module_common/apps/verify_boot/verify_boot.cpp` - Boot verification display
-  - Shows boot verification status
-  - Displays image hash
-  - Reports signature validation results
-- `module_5/tools/generate_keys.sh` - RSA key pair generation
-  - Creates 4096-bit RSA keys
-  - Generates PEM format private/public keys
-  - Stores keys in `module_5/keys/` directory
-- `module_5/tools/sign_image.sh` - Image signing utility
-  - Signs IFS image with SHA-256 + RSA
-  - Creates detached signature file (`.sig`)
-  - Uses OpenSSL for cryptographic operations
-- `module_5/tools/verify_image.sh` - Signature verification
-  - Verifies image signature before boot
-  - Validates cryptographic hash
-  - Reports verification success/failure
-
-**What You'll See:**
-- RSA key generation output
-- Image signing process
-- Signature verification results
-- Boot status display
-- Tamper detection demonstration (if image modified)
-
-**Build & Run:**
-```bash
-# First time: Generate RSA keys
-cd module_5/tools
-./generate_keys.sh
-
-# Build, sign, and run
-bazel run //module_5:run_qemu
-```
-
-**Key Concepts:**
-- Public-key cryptography (RSA-4096)
-- Digital signatures (SHA-256 + RSA)
-- Image integrity verification
-- Chain of trust
-- Secure boot process flow
-
-**Security Model:**
-```
-┌─────────────────┐
-│  Generate Keys  │ (One-time setup)
-└────────┬────────┘
-         │
-         ▼
-┌─────────────────┐
-│   Build Image   │ (mkifs)
-└────────┬────────┘
-         │
-         ▼
-┌─────────────────┐
-│   Sign Image    │ (RSA-4096 + SHA-256)
-└────────┬────────┘
-         │
-         ▼
-┌─────────────────┐
-│  Verify & Boot  │ (Check signature)
-└─────────────────┘
 ```
 
 ---
@@ -643,19 +558,13 @@ bazel run //module_1:run_qemu
    - Write security policy definitions
    - Implement authorized/unauthorized access patterns
 
-5. **Module 5 - Secure Boot** (60 min)
-   - Learn cryptographic signing and verification
-   - Implement secure boot chain
-   - Detect tampering and integrity violations
-
-**Total Time:** ~4-5 hours for complete training
+**Total Time:** ~3-4 hours for complete training
 
 **Prerequisites by Module:**
 - Module 1: None
 - Module 2: Module 1 completed
 - Module 3: Module 2 completed, understand IPC concepts
 - Module 4: Module 3 completed, understand QNX security model
-- Module 5: Module 4 completed, understand cryptography basics
 
 ---
 
@@ -665,7 +574,6 @@ bazel run //module_1:run_qemu
 - **Module READMEs:**
   - [Module 3: IPC Communication](module_3/README.md)
   - [Module 4: Security Policies](module_4/README.md)
-  - [Module 5: Secure Boot](module_5/README.md)
 - **[toolchains_qnx/README.md](toolchains_qnx/README.md)** - Bazel toolchain documentation
 
 ---
@@ -738,6 +646,5 @@ This is a training repository. If you find issues or have improvements:
 | 2 | 45m | System Tools | `bazel run //module_2:run_qemu` |
 | 3 | 60m | IPC | `bazel run //module_3:run_qemu` |
 | 4 | 90m | Security | `bazel run //module_4:run_qemu` |
-| 5 | 60m | Secure Boot | `bazel run //module_5:run_qemu` |
 
 **Next Steps:** Start with `bazel run //module_1:run_qemu` and follow the [TRAINING.md](TRAINING.md) guide!
