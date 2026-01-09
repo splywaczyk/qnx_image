@@ -93,13 +93,16 @@ See [TRAINING.md](TRAINING.md) for complete step-by-step documentation.
 ### Module 1: Hello World 👋
 **Duration:** 15-30 minutes
 **Learning Objectives:**
-- Build a simple C++ application for QNX using Bazel
+- Build a simple C++17 application for QNX using Bazel
 - Create a minimal bootable QNX IFS image (< 2MB)
 - Run QNX in QEMU emulator
 - Understand basic QNX image structure
+- Learn modern C++ organization with header/implementation separation
 
 **Key Components:**
-- `module_common/apps/hello_world/hello_world.cpp` - Simple C++ application with command-line args
+- `module_common/apps/hello_world/qnx_application.h` - Application class header
+- `module_common/apps/hello_world/qnx_application.cpp` - Implementation
+- `module_common/apps/hello_world/main.cpp` - Entry point
 - `module_1/buildfiles/qnx_minimal.build` - Minimal IFS configuration with procnto and ksh
 - `module_1/BUILD` - Bazel build rules for IFS generation
 
@@ -151,20 +154,26 @@ bazel run //module_2:run_qemu
 - Connect to channels with `name_open()`
 - Send/receive synchronous messages
 - Handle multiple concurrent clients
+- Use C++17 features: smart pointers, RAII, optional, chrono
 
 **Components:**
-- `module_common/apps/sender_receiver/receiver.cpp` - Message receiver
-  - Creates named channel `/dev/name/local/qnx_receiver`
+- `module_common/apps/receiver/` - Secure Message Receiver
+  - `secure_message_receiver.h` - Receiver class header with RAII
+  - `secure_message_receiver.cpp` - Implementation with unique_ptr
+  - `main.cpp` - Entry point
+  - Creates named channel with automatic cleanup
   - Receives messages from multiple senders
   - Displays message type, subtype, and data
-  - Sends acknowledgment replies
-- `module_common/apps/sender_receiver/sender1.cpp` - First sender
+- `module_common/apps/sender_a/` - Sender A (Authorized)
+  - `message_sender.h` - Sender class with connection management
+  - `message_sender.cpp` - Implementation with optional and chrono
+  - `main.cpp` - Entry point
   - Sends 10 messages (type=1, subtype=100)
-  - 2-second intervals between messages
-  - Waits for receiver acknowledgments
-- `module_common/apps/sender_receiver/sender2.cpp` - Second sender
+  - 2-second intervals using std::chrono
+- `module_common/apps/sender_b/` - Sender B (Unauthorized)
+  - Same structure as sender_a
   - Sends 7 messages (type=2, subtype=200)
-  - 3-second intervals between messages
+  - 3-second intervals
   - Demonstrates concurrent IPC
 
 **What You'll See:**
@@ -184,6 +193,9 @@ bazel run //module_3:run_qemu
 - Connection IDs (coid) and Receive IDs (rcvid)
 - Synchronous message passing (blocking)
 - Message structure design
+- RAII for resource management (unique_ptr with custom deleter)
+- std::optional for safer return values
+- std::chrono for time management
 
 ---
 
@@ -278,15 +290,16 @@ toolchains_qnx/
 
 **Key Features:**
 - **Cross-compilation:** QCC wrapper for QNX target compilation
-- **C++ Standard:** GNU++14 with full C++14 STL support
+- **C++ Standard:** C++17 with full STL support
 - **Compiler:** QCC 8.3.0 (GCC-based)
 - **Sandboxing:** Enabled with QNX license directory mounting
 - **IFS Generation:** Custom Bazel rule (`qnx_ifs`) for building bootable images
+- **Modern C++:** Smart pointers, RAII, optional, string_view
 
 **Compiler Flags:**
 - `-O2` - Optimization level 2
 - `-Wall -Wextra` - Comprehensive warnings
-- `-std=gnu++14` - GNU C++14 standard
+- `-std=c++17` - C++17 standard
 - `-fno-exceptions` - No C++ exceptions (embedded)
 - `-fno-rtti` - No runtime type information
 
